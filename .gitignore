@@ -1,3 +1,8 @@
+#Proteus Library
+*Proteus.elf
+*Proteus.map
+*Proteus.s19
+
 # Prerequisites
 *.d
 
