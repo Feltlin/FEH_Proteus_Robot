@@ -30,44 +30,38 @@ bool BRSwitch = true;
 
 void Left(float degrees)
 {
-    LeftWheelMotor.SetPercent(-25);
-    RightWheelMotor.SetPercent(25);
-    Sleep(0.5 * (degrees/90.));
+    LCD.Clear();
+    LCD.Write("Back Left");
+    LeftWheelMotor.Stop();
+    RightWheelMotor.SetPercent(-25);
+    Sleep(1.3 * (degrees/90.));
     LeftWheelMotor.Stop();
     RightWheelMotor.Stop();
 }
 
 void Right(float degrees)
 {
-    LeftWheelMotor.SetPercent(25);
-    RightWheelMotor.SetPercent(-25);
-    Sleep(0.5 * (degrees/90.));
+    LCD.Clear();
+    LCD.Write("Back Right");
+    LeftWheelMotor.SetPercent(-25);
+    RightWheelMotor.Stop();
+    Sleep(1.5 * (degrees/90.));
     LeftWheelMotor.Stop();
     RightWheelMotor.Stop();
 }
 
-void InchForward()
-{
-    LeftWheelMotor.SetPercent(25);
-    RightWheelMotor.SetPercent(25);
-    Sleep(0.2);
-}
-
-void InchBackwards()
-{
-    LeftWheelMotor.SetPercent(-25);
-    RightWheelMotor.SetPercent(-25);
-    Sleep(0.2);
-}
-
 void Forward()
 {
+    LCD.Clear();
+    LCD.Write("Go Forward");
     RightWheelMotor.SetPercent(25);
     LeftWheelMotor.SetPercent(25);
 }
 
-void Backwards()
+void Backward()
 {
+    LCD.Clear();
+    LCD.Write("Go Backwards");
     RightWheelMotor.SetPercent(-25);
     LeftWheelMotor.SetPercent(-25);
 }
@@ -82,6 +76,8 @@ void SetBools()
 
 void WaitForSwitches(bool & switch1, bool & switch2)
 {
+    LCD.Clear();
+    LCD.Write("Waiting For Switches");
     while(switch1 && switch2)
     {
         SetBools();
@@ -92,18 +88,16 @@ int main(void)
 {
     Forward();
     WaitForSwitches(FRSwitch, FLSwitch);
-    InchBackwards();
     Left(90);
+    Backward();
+    WaitForSwitches(BLSwitch, BRSwitch);
     Forward();
     WaitForSwitches(FRSwitch, FLSwitch);
-    Backwards();
+    Right(90);
+    Backward();
     WaitForSwitches(BLSwitch, BRSwitch);
-    InchForward();
-    Left(90);
     Forward();
     WaitForSwitches(FRSwitch, FLSwitch);
-    Backwards();
-    WaitForSwitches(BLSwitch, BRSwitch);
     RightWheelMotor.Stop();
     LeftWheelMotor.Stop();
     
