@@ -13,36 +13,99 @@
 
 // Front wheel drive, front wheels are normal, back wheels are omni-wheels
 // Tank drive
-FEHMotor FLWheelMotor0 (FEHMotor::Motor0, 9.0);
-FEHMotor FRWheelMotor1 (FEHMotor::Motor1, 9.0);
+FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
+FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
 //declares an analog input pin on P0_3
 AnalogInputPin CdS_cell(FEHIO::P0_3);
-//declares a digital input pin on P2_1
-DigitalInputPin bump_switch(FEHIO::P2_1);
+//declares a digital input pin on P0_0
+DigitalInputPin front_left(FEHIO::P3_7);
+DigitalInputPin front_right(FEHIO::P0_0);
+DigitalInputPin back_left(FEHIO::P3_6);
+DigitalInputPin back_right(FEHIO::P0_1);
+
+bool FLSwitch = true;
+bool FRSwitch = true;
+bool BLSwitch = true;
+bool BRSwitch = true;
+
+void Left(float degrees)
+{
+    LeftWheelMotor.SetPercent(-25);
+    RightWheelMotor.SetPercent(25);
+    Sleep(0.5 * (degrees/90.));
+    LeftWheelMotor.Stop();
+    RightWheelMotor.Stop();
+}
+
+void Right(float degrees)
+{
+    LeftWheelMotor.SetPercent(25);
+    RightWheelMotor.SetPercent(-25);
+    Sleep(0.5 * (degrees/90.));
+    LeftWheelMotor.Stop();
+    RightWheelMotor.Stop();
+}
+
+void InchForward()
+{
+    LeftWheelMotor.SetPercent(25);
+    RightWheelMotor.SetPercent(25);
+    Sleep(0.2);
+}
+
+void InchBackwards()
+{
+    LeftWheelMotor.SetPercent(-25);
+    RightWheelMotor.SetPercent(-25);
+    Sleep(0.2);
+}
+
+void Forward()
+{
+    RightWheelMotor.SetPercent(25);
+    LeftWheelMotor.SetPercent(25);
+}
+
+void Backwards()
+{
+    RightWheelMotor.SetPercent(-25);
+    LeftWheelMotor.SetPercent(-25);
+}
+
+void SetBools()
+{
+    FLSwitch = front_left.Value();
+    FRSwitch = front_right.Value();
+    BLSwitch = back_left.Value();
+    BRSwitch = back_right.Value();
+}
+
+void WaitForSwitches(bool & switch1, bool & switch2)
+{
+    while(switch1 && switch2)
+    {
+        SetBools();
+    }
+}
 
 int main(void)
 {
-    //read the value of the CdS_cell and store in x
-    float cdsValue = CdS_cell.Value();
-    //read the value of the digital input into x
-    bool switchy = bump_switch.Value();
-    LCD.Clear(BLACK);
-    LCD.WriteLine("Testing Front Left Forward");
-    FLWheelMotor0.SetPercent(100.);
-    Sleep(1.);
-    LCD.Clear(BLACK);
-    LCD.WriteLine("Testing Front Left Reverse");
-    FLWheelMotor0.SetPercent(-100.);
-    Sleep(1.);
-    FLWheelMotor0.Stop();
-    LCD.Clear(BLACK);
-    LCD.WriteLine("Testing Front Right Forward");
-    FRWheelMotor1.SetPercent(100.);
-    Sleep(1.);
-    LCD.Clear(BLACK);
-    LCD.WriteLine("Testing Front Right Reverse");
-    FRWheelMotor1.SetPercent(-100.);
-    Sleep(1.);
-    FRWheelMotor1.Stop();
+    Forward();
+    WaitForSwitches(FRSwitch, FLSwitch);
+    InchBackwards();
+    Left(90);
+    Forward();
+    WaitForSwitches(FRSwitch, FLSwitch);
+    Backwards();
+    WaitForSwitches(BLSwitch, BRSwitch);
+    InchForward();
+    Left(90);
+    Forward();
+    WaitForSwitches(FRSwitch, FLSwitch);
+    Backwards();
+    WaitForSwitches(BLSwitch, BRSwitch);
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+    
 	return 0;
 }
