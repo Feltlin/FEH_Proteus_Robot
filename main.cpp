@@ -314,7 +314,6 @@ class State{
 
         }
         else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 200){
-            Sleep(1.);
             for(int i = 0; i < 3; ++i){
                 if(i == 1){
                     LCD.Write(" Left: ");
@@ -333,13 +332,22 @@ class State{
                 errorDel[i] = (newError[i] - lastError[i]) / (newTime - lastTime) * 1000;
                 errorSum[i] += newError[i];
                 PTerm[i] = newError[i] * PConst[i];
-                ITerm[i] = errorSum[i] * IConst[i];
-                DTerm[i] = errorDel[i] * DConst[i];
+                ITerm[i] = /*errorSum[i] * IConst[i]*/0;
+                DTerm[i] = /*errorDel[i] * DConst[i]*/0;
                 power[i] = power[i] + PTerm[i] + ITerm[i] + DTerm[i];
+                if(i == 1){
+                    LCD.Write(" Left ATTEMPT: ");
+                    LCD.Write(power[i]);
+                }
+                else if(i == 2){
+                    LCD.Write(" Right ATTEMPT: ");
+                    LCD.Write(power[i]);
+                }
                 if(power[i] > 50) power[i] = 50;
                 if(power[i] < -50) power[i] = -50;
                 motor[i].SetPercent(power[i] * direction[i]);
             }
+            Sleep(1.);
         }
         else{
             for(int i = 0; i < 3; ++i){
