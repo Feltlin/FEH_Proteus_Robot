@@ -314,7 +314,7 @@ class State{
 
         }
         else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 200){
-            Sleep(1);
+            Sleep(1.);
             for(int i = 0; i < 3; ++i){
                 if(i == 1){
                     LCD.Write(" Left: ");
@@ -336,6 +336,8 @@ class State{
                 ITerm[i] = errorSum[i] * IConst[i];
                 DTerm[i] = errorDel[i] * DConst[i];
                 power[i] = power[i] + PTerm[i] + ITerm[i] + DTerm[i];
+                if(power[i] > 50) power[i] = 50;
+                if(power[i] < -50) power[i] = -50;
                 motor[i].SetPercent(power[i] * direction[i]);
             }
         }
