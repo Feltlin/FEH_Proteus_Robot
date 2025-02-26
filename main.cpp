@@ -11,6 +11,7 @@
 #include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <algorithm>
 
 void colorSensor(){
     // Front wheel drive, front wheels are normal, back wheels are omni-wheels
@@ -261,6 +262,48 @@ FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor2, 9.0),
 };
 
+void milestone_1(){
+    for(int i = 0; i < 3; ++i){
+        encoder[i].ResetCounts();
+    }
+    motor[1].SetPercent(-20);
+    motor[2].SetPercent(20);
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 20){}
+    motor[1].Stop();
+    motor[2].Stop();
+
+    Sleep(1.);
+    for(int i = 0; i < 3; ++i){
+        encoder[i].ResetCounts();
+    }
+    motor[1].SetPercent(20);
+    motor[2].SetPercent(-20);
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 20){}
+    motor[1].Stop();
+    motor[2].Stop();
+
+    float x, y;
+    while(!LCD.Touch(&x, &y)){}
+    for(int i = 0; i < 3; ++i){
+        encoder[i].ResetCounts();
+    }
+    motor[1].SetPercent(-40);
+    motor[2].SetPercent(40);
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 30){}
+    motor[1].Stop();
+    motor[2].Stop();
+
+    Sleep(1.);
+    for(int i = 0; i < 3; ++i){
+        encoder[i].ResetCounts();
+    }
+    motor[1].SetPercent(40);
+    motor[2].SetPercent(-40);
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 30){}
+    motor[1].Stop();
+    motor[2].Stop();
+}
+
 class State{
     public:
         double inchPerCount = 2.5 * M_PI / 318;
@@ -305,8 +348,8 @@ class State{
             expectedSpeed[0] = 0;
             expectedSpeed[1] = 2;
             expectedSpeed[2] = 2;
-            direction[1] = 1;
-            direction[2] = -1;
+            direction[1] = -1;
+            direction[2] = 1;
             power[1] = 20;
             power[2] = 20;
             motor[1].SetPercent(power[1] * direction[1]);
@@ -334,7 +377,7 @@ class State{
                 PTerm[i] = newError[i] * PConst[i];
                 ITerm[i] = /*errorSum[i] * IConst[i]*/0;
                 DTerm[i] = /*errorDel[i] * DConst[i]*/0;
-                power[i] = power[i] + PTerm[i] + ITerm[i] + DTerm[i];
+                power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
                 if(i == 1){
                     LCD.Write(" Left ATTEMPT: ");
                     LCD.Write(power[i]);
@@ -343,8 +386,6 @@ class State{
                     LCD.Write(" Right ATTEMPT: ");
                     LCD.Write(power[i]);
                 }
-                if(power[i] > 50) power[i] = 50;
-                if(power[i] < -50) power[i] = -50;
                 motor[i].SetPercent(power[i] * direction[i]);
             }
             Sleep(1.);
@@ -353,6 +394,13 @@ class State{
             for(int i = 0; i < 3; ++i){
                 motor[i].Stop();
             }
+            LCD.WriteLine("");
+            LCD.Write("Front: ");
+            LCD.WriteLine(encoder[0].Counts());
+            LCD.Write("Left: ");
+            LCD.WriteLine(encoder[1].Counts());
+            LCD.Write("Right: ");
+            LCD.WriteLine(encoder[2].Counts());
         }
     }
 };
