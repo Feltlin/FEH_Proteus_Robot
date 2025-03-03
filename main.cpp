@@ -266,19 +266,9 @@ void milestone_1(){
     for(int i = 0; i < 3; ++i){
         encoder[i].ResetCounts();
     }
-    motor[1].SetPercent(-20);
+    motor[1].SetPercent(-22.5);
     motor[2].SetPercent(20);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 20){}
-    motor[1].Stop();
-    motor[2].Stop();
-
-    Sleep(1.);
-    for(int i = 0; i < 3; ++i){
-        encoder[i].ResetCounts();
-    }
-    motor[1].SetPercent(20);
-    motor[2].SetPercent(-20);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 20){}
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 26){}
     motor[1].Stop();
     motor[2].Stop();
 
@@ -287,9 +277,9 @@ void milestone_1(){
     for(int i = 0; i < 3; ++i){
         encoder[i].ResetCounts();
     }
-    motor[1].SetPercent(-40);
+    motor[1].SetPercent(-41.7);
     motor[2].SetPercent(40);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 30){}
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 28){}
     motor[1].Stop();
     motor[2].Stop();
 
@@ -298,8 +288,8 @@ void milestone_1(){
         encoder[i].ResetCounts();
     }
     motor[1].SetPercent(40);
-    motor[2].SetPercent(-40);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 30){}
+    motor[2].SetPercent(-41);
+    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 23){}
     motor[1].Stop();
     motor[2].Stop();
 }
@@ -388,7 +378,7 @@ class State{
                 }
                 motor[i].SetPercent(power[i] * direction[i]);
             }
-            Sleep(1.);
+            Sleep(0.01);
         }
         else{
             for(int i = 0; i < 3; ++i){
