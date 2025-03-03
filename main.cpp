@@ -13,6 +13,80 @@
 #include <math.h>
 #include <algorithm>
 
+void Exploration03()
+{
+    FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
+    FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
+
+    DigitalEncoder LeftEncoder(FEHIO::P0_2);
+    DigitalEncoder RightEncoder(FEHIO::P0_1);
+
+    DigitalInputPin distanceSensor(FEHIO::P0_0);
+
+    //RCS.InitializeTouchMenu("1020C8WIE");
+
+    bool objectWithinRange = false;
+    LeftWheelMotor.SetPercent(-27);
+    RightWheelMotor.SetPercent(-25);
+    while (!objectWithinRange)
+    {
+        objectWithinRange = !distanceSensor.Value();
+        LCD.WriteLine("\u2207");
+        LCD.WriteLine(objectWithinRange);
+    }
+
+    RightWheelMotor.SetPercent(25);
+    LeftWheelMotor.SetPercent(25);
+    Sleep(0.5);
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+
+
+    //Turn left 90 degree.
+    RightEncoder.ResetCounts();
+    LeftEncoder.ResetCounts();
+    RightWheelMotor.SetPercent(25);
+    LeftWheelMotor.SetPercent(-25);
+    while((LeftEncoder.Counts() + RightEncoder.Counts()) / 2. < 224);
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+
+    objectWithinRange = false;
+    LeftWheelMotor.SetPercent(-27);
+    RightWheelMotor.SetPercent(-25);
+    while (!objectWithinRange)
+    {
+        objectWithinRange = !distanceSensor.Value();
+        LCD.WriteLine(objectWithinRange);
+    }
+
+    RightWheelMotor.SetPercent(25);
+    LeftWheelMotor.SetPercent(25);
+    Sleep(0.5);
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+
+    //Turn right 90 degree.
+    RightEncoder.ResetCounts();
+    LeftEncoder.ResetCounts();
+    RightWheelMotor.SetPercent(-25);
+    LeftWheelMotor.SetPercent(25);
+    while((LeftEncoder.Counts() + RightEncoder.Counts()) / 2. < 224);
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+
+    objectWithinRange = false;
+    LeftWheelMotor.SetPercent(-26);
+    RightWheelMotor.SetPercent(-25);
+    while (!objectWithinRange)
+    {
+        objectWithinRange = !distanceSensor.Value();
+        LCD.WriteLine(objectWithinRange);
+    }
+    RightWheelMotor.Stop();
+    LeftWheelMotor.Stop();
+}
+
 void colorSensor(){
     // Front wheel drive, front wheels are normal, back wheels are omni-wheels
     // Tank drive
