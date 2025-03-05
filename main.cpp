@@ -84,31 +84,45 @@ void exploration_3(){
 }
 
 void colorSensor(){
-    // Front wheel drive, front wheels are normal, back wheels are omni-wheels
-    // Tank drive
+    //Being Updated for Milestone 2, Originally from Exploration 01
+    //This code uses no color filter for CdS Cell
     FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
     FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
     //declares an analog input pin on P0_3
     AnalogInputPin CdS_cell(FEHIO::P0_3);
-    FEHServo servo(FEHServo::Servo0);
+    //FEHServo servo(FEHServo::Servo0);
     //declares a digital input pin on P0_0
-    DigitalInputPin front_left(FEHIO::P3_7);
-    DigitalInputPin front_right(FEHIO::P0_0);
-    DigitalInputPin back_left(FEHIO::P3_6);
-    DigitalInputPin back_right(FEHIO::P0_1);
+    //DigitalInputPin front_left(FEHIO::P3_7);
+    //DigitalInputPin front_right(FEHIO::P0_0);
+    //DigitalInputPin back_left(FEHIO::P3_6);
+    //DigitalInputPin back_right(FEHIO::P0_1);
 
     float cds = CdS_cell.Value();
-    float angle = 0;
+    //float angle = 0;
     float x;
     float y;
+    float colorVal;
+    //no light is 0, red is 1, blue is 2
 
-    servo.SetMin(500);
-    servo.SetMax(2419);
-    servo.SetDegree(0);
+    //servo.SetMin(500);
+    //servo.SetMax(2419);
+    //servo.SetDegree(0);
     Sleep(1.0);
-    servo.SetDegree(50);
-    Sleep(2.0);
-    servo.SetDegree(180);
+    if (cds < 0.33){
+        //Red Light
+        colorVal = 1;
+    }
+    else if (cds < 0.66){
+        //blue light
+        colorVal = 2;
+    }
+    else{
+        //no light
+        colorVal = 0;
+    }
+    //servo.SetDegree(50);
+    //Sleep(2.0);
+    //servo.SetDegree(180);
     // while (!LCD.Touch(&x, &y))
     // {
     //     cds = CdS_cell.Value();
@@ -468,6 +482,8 @@ class State{
                     LCD.Write(power[i]);
                 }
                 motor[i].SetPercent(power[i] * direction[i]);
+
+                //Place to add CdS Code
             }
             Sleep(0.01);
         }
