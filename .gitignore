@@ -2,6 +2,7 @@
 *Proteus.elf
 *Proteus.map
 *Proteus.s19
+fehproteusfirmware/
 
 # Prerequisites
 *.d
