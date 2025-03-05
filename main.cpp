@@ -13,8 +13,7 @@
 #include <math.h>
 #include <algorithm>
 
-void Exploration03()
-{
+void exploration_3(){
     FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
     FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
 
@@ -28,8 +27,7 @@ void Exploration03()
     bool objectWithinRange = false;
     LeftWheelMotor.SetPercent(-27);
     RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange)
-    {
+    while (!objectWithinRange){
         objectWithinRange = !distanceSensor.Value();
         LCD.WriteLine("\u2207");
         LCD.WriteLine(objectWithinRange);
@@ -54,8 +52,7 @@ void Exploration03()
     objectWithinRange = false;
     LeftWheelMotor.SetPercent(-27);
     RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange)
-    {
+    while (!objectWithinRange){
         objectWithinRange = !distanceSensor.Value();
         LCD.WriteLine(objectWithinRange);
     }
@@ -78,8 +75,7 @@ void Exploration03()
     objectWithinRange = false;
     LeftWheelMotor.SetPercent(-26);
     RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange)
-    {
+    while (!objectWithinRange){
         objectWithinRange = !distanceSensor.Value();
         LCD.WriteLine(objectWithinRange);
     }
@@ -325,18 +321,17 @@ void asyncMusic(){
     }
 }
 
-DigitalEncoder encoder[3] = {
-    DigitalEncoder(FEHIO::P0_0),
-    DigitalEncoder(FEHIO::P0_1),
-    DigitalEncoder(FEHIO::P0_2),
-};
-FEHMotor motor[3] = {
-    FEHMotor(FEHMotor::Motor0, 9.0),
-    FEHMotor(FEHMotor::Motor1, 9.0),
-    FEHMotor(FEHMotor::Motor2, 9.0),
-};
-
 void milestone_1(){
+    DigitalEncoder encoder[3] = {
+        DigitalEncoder(FEHIO::P0_0),
+        DigitalEncoder(FEHIO::P0_1),
+        DigitalEncoder(FEHIO::P0_2),
+    };
+    FEHMotor motor[3] = {
+        FEHMotor(FEHMotor::Motor0, 9.0),
+        FEHMotor(FEHMotor::Motor1, 9.0),
+        FEHMotor(FEHMotor::Motor2, 9.0),
+    };
     for(int i = 0; i < 3; ++i){
         encoder[i].ResetCounts();
     }
@@ -368,8 +363,30 @@ void milestone_1(){
     motor[2].Stop();
 }
 
+void fiveRevolution(){
+    FEHMotor frontMotor = FEHMotor(FEHMotor::Motor0, 9.0);
+    DigitalEncoder frontEncoder = DigitalEncoder(FEHIO::P0_0);
+
+    frontMotor.SetPercent(20.);
+
+    while(frontEncoder.Counts() <= 318 * 5){
+        LCD.WriteLine(frontEncoder.Counts());
+    }
+    frontMotor.Stop();
+}
+
 class State{
     public:
+        DigitalEncoder encoder[3] = {
+            DigitalEncoder(FEHIO::P0_0),
+            DigitalEncoder(FEHIO::P0_1),
+            DigitalEncoder(FEHIO::P0_2),
+        };
+        FEHMotor motor[3] = {
+            FEHMotor(FEHMotor::Motor0, 9.0),
+            FEHMotor(FEHMotor::Motor1, 9.0),
+            FEHMotor(FEHMotor::Motor2, 9.0),
+        };
         double inchPerCount = 2.5 * M_PI / 318;
 
         //{Front, Left, Right}
@@ -476,15 +493,6 @@ int main(){
         state.updateTime();
         state.updateState();
     }
-    // FEHMotor frontMotor = FEHMotor(FEHMotor::Motor0, 9.0);
-    // DigitalEncoder frontEncoder = DigitalEncoder(FEHIO::P0_0);
-
-    // frontMotor.SetPercent(20.);
-
-    // while(frontEncoder.Counts() <= 318 * 5){
-    //     LCD.WriteLine(frontEncoder.Counts());
-    // }
-    // frontMotor.Stop();
 
 	return 0;
 }
