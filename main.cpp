@@ -401,6 +401,7 @@ class State{
             FEHMotor(FEHMotor::Motor1, 9.0),
             FEHMotor(FEHMotor::Motor2, 9.0),
         };
+        AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
         double inchPerCount = 2.5 * M_PI / 318;
 
         //{Front, Left, Right}
@@ -562,6 +563,26 @@ class State{
                 motor[i].Stop();
             }
         }
+    }
+    void CdS(){
+        Sleep(1.0);
+        float light = CdS.Value();
+
+        std::string colorVal;
+
+        if (light < 0.33){
+            //Red Light
+            colorVal = "Red";
+        }
+        else if (light < 0.66){
+            //blue light
+            colorVal = "Blue";
+        }
+        else{
+            //no light
+            colorVal = "None";
+        }
+
     }
 
 
