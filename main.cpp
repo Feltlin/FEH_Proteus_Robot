@@ -426,6 +426,50 @@ class State{
         }
     }
 
+    void PID(){
+        for(int i = 0; i < 3; ++i){
+            updateTime(i);
+            oldCount[i] = newCount[i];
+            newCount[i] = encoder[i].Counts();
+            actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
+            oldError[i] = newError[i];
+            newError[i] = expectedSpeed[i] - actualSpeed[i];
+            errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
+            errorSum[i] += newError[i];
+            PTerm[i] = newError[i] * PConst[i];
+            ITerm[i] = errorSum[i] * IConst[i];
+            DTerm[i] = errorDel[i] * DConst[i];
+            power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+            motor[i].SetPercent(power[i] * direction[i]);
+        }
+    }
+
+    void zero(){
+        for(int i = 0; i < 3; ++i){
+            motor[i].SetPercent(0);
+            encoder[i].ResetCounts();
+            newError[i] = 0;
+            oldError[i] = 0;
+            errorSum[i] = 0;
+            errorDel[i] = 0;
+            PTerm[i] = 0;
+            ITerm[i] = 0;
+            DTerm[i] = 0;
+
+            actualSpeed[i] = 0;
+            expectedSpeed[i] = 0;
+            power[i] = 0;
+            distance[i] = 0;
+            direction[i] = 0;
+
+            newCount[i] = 0;
+            oldCount[i] = 0;
+
+            newTime[i] = 0;
+            lastTime[i] = 0;
+        }
+    }
+
     void updateTime(int i){
         lastTime[i] = newTime[i];
         newTime[i] = TimeNowMSec();
@@ -442,11 +486,15 @@ class State{
         else if(state == "rotate"){
             rotate();
         }
+        else if(state == "moveToButton"){
+            moveToButton();
+        }
     }
 
     void start(){
         if(init){
             init = false;
+            zero();
             expectedSpeed[0] = 0;
             expectedSpeed[1] = 2;
             expectedSpeed[2] = 2;
@@ -458,24 +506,8 @@ class State{
             motor[2].SetPercent(power[2] * direction[2]);
 
         }
-        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 20){
-            for(int i = 0; i < 3; ++i){
-                updateTime(i);
-                oldCount[i] = newCount[i];
-                newCount[i] = encoder[i].Counts();
-                actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
-                oldError[i] = newError[i];
-                newError[i] = expectedSpeed[i] - actualSpeed[i];
-                errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
-                errorSum[i] += newError[i];
-                PTerm[i] = newError[i] * PConst[i];
-                ITerm[i] = errorSum[i] * IConst[i];
-                DTerm[i] = errorDel[i] * DConst[i];
-                power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
-                motor[i].SetPercent(power[i] * direction[i]);
-
-                //Place to add CdS Code
-            }
+        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 30){
+            PID();
         }
         else{
             for(int i = 0; i < 3; ++i){
@@ -489,55 +521,50 @@ class State{
     void rotate(){
         if(init){
             init = false;
+            zero();
             for(int i = 0; i < 3; ++i){
-                encoder[i].ResetCounts();
-                oldCount[i] = 0;
-                newCount[i] = 0;
-            }
-            expectedSpeed[0] = 2;
-            expectedSpeed[1] = 2;
-            expectedSpeed[2] = 2;
-            direction[0] = 1;
-            direction[1] = 1;
-            direction[2] = 1;
-            power[0] = 20;
-            power[1] = 20;
-            power[2] = 20;
-            motor[0].SetPercent(power[0] * direction[0]);
-            motor[1].SetPercent(power[1] * direction[1]);
-            motor[2].SetPercent(power[2] * direction[2]);
-
-        }
-        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4. * M_PI / 3){
-            for(int i = 0; i < 3; ++i){ 
-                updateTime(i);
-                oldCount[i] = newCount[i];
-                newCount[i] = encoder[i].Counts();
-                actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
-                oldError[i] = newError[i];
-                newError[i] = expectedSpeed[i] - actualSpeed[i];
-                errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
-                errorSum[i] += newError[i];
-                PTerm[i] = newError[i] * PConst[i];
-                ITerm[i] = errorSum[i] * IConst[i];
-                DTerm[i] = errorDel[i] * DConst[i];
-                power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+                expectedSpeed[i] = 1;
+                direction[i] = 1;
+                power[i] = 20;
                 motor[i].SetPercent(power[i] * direction[i]);
             }
+        }
+        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4. * M_PI / 2){
+            PID();
         }
         else{
             for(int i = 0; i < 3; ++i){
                 motor[i].Stop();
             }
-            LCD.WriteLine("RotateRotateRotate");
-            LCD.Write("Front: ");
-            LCD.WriteLine(encoder[0].Counts());
-            LCD.Write("Left: ");
-            LCD.WriteLine(encoder[1].Counts());
-            LCD.Write("Right: ");
-            LCD.WriteLine(encoder[2].Counts());
+            state = "moveToButton";
+            init = true;
         }
     }
+
+    void moveToButton(){
+        if(init){
+            init = false;
+            zero();
+            expectedSpeed[1] = 2;
+            expectedSpeed[2] = 2;
+            direction[1] = -1;
+            direction[2] = 1;
+            power[1] = 20;
+            power[2] = 20;
+            motor[1].SetPercent(power[1] * direction[1]);
+            motor[2].SetPercent(power[2] * direction[2]);
+        }
+        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 15){
+            PID();
+        }
+        else{
+            for(int i = 0; i < 3; ++i){
+                motor[i].Stop();
+            }
+        }
+    }
+
+
 };
 
 State state;
