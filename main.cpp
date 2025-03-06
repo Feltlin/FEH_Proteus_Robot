@@ -390,18 +390,18 @@ class State{
         double inchPerCount = 2.5 * M_PI / 318;
 
         //{Front, Left, Right}
-        double newError[3] = {0, 0, 0}, lastError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
+        double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
         double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
-        double PConst[3] = {0.03, 0.03, 0.03}, IConst[3] = {0, 0, 0}, DConst[3] = {1e-3, 1e-3, 1e-3};
+        double PConst[3] = {0.1, 0.1, 0.1}, IConst[3] = {0, 0, 0}, DConst[3] = {0, 0, 0};
 
         double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
         double power[3] = {0, 0, 0};
         double distance[3] = {0, 0, 0};
         int direction[3] = {1, 1, 1};
 
-        int newCount[3] = {0, 0, 0}, lastCount[3] = {0, 0, 0};
+        int newCount[3] = {0, 0, 0}, oldCount[3] = {0, 0, 0};
 
-        unsigned long newTime = 0, lastTime = 0;
+        unsigned long newTime[3] = {0, 0, 0}, lastTime[3] = {0, 0, 0};
 
         std::string state = "start";
         bool init = true;
@@ -412,14 +412,21 @@ class State{
         }
     }
 
-    void updateTime(){
-        lastTime = newTime;
-        newTime = TimeNowMSec();
+    void updateTime(int i){
+        lastTime[i] = newTime[i];
+        newTime[i] = TimeNowMSec();
+        LCD.Write("lastTime: ");
+        LCD.WriteLine(int(lastTime[i]));
+        LCD.Write("newTime: ");
+        LCD.WriteLine(int(newTime[i]));
     }
 
     void updateState(){
         if(state == "start"){
             start(); 
+        }
+        else if(state == "rotate"){
+            rotate();
         }
     }
 
@@ -437,45 +444,76 @@ class State{
             motor[2].SetPercent(power[2] * direction[2]);
 
         }
-        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 200){
+        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 20){
             for(int i = 0; i < 3; ++i){
-                if(i == 1){
-                    LCD.Write(" Left: ");
-                    LCD.Write(power[i]);
-                }
-                else if(i == 2){
-                    LCD.Write(" Right: ");
-                    LCD.Write(power[i]);
-                }
-                
-                lastCount[i] = newCount[i];
+                updateTime(i);
+                oldCount[i] = newCount[i];
                 newCount[i] = encoder[i].Counts();
-                actualSpeed[i] = inchPerCount * (newCount[i] - lastCount[i]) / (newTime - lastTime) * 1000;
-                lastError[i] = newError[i];
+                actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
+                oldError[i] = newError[i];
                 newError[i] = expectedSpeed[i] - actualSpeed[i];
-                errorDel[i] = (newError[i] - lastError[i]) / (newTime - lastTime) * 1000;
+                errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
                 errorSum[i] += newError[i];
                 PTerm[i] = newError[i] * PConst[i];
-                ITerm[i] = /*errorSum[i] * IConst[i]*/0;
-                DTerm[i] = /*errorDel[i] * DConst[i]*/0;
+                ITerm[i] = errorSum[i] * IConst[i];
+                DTerm[i] = errorDel[i] * DConst[i];
                 power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
-                if(i == 1){
-                    LCD.Write(" Left ATTEMPT: ");
-                    LCD.Write(power[i]);
-                }
-                else if(i == 2){
-                    LCD.Write(" Right ATTEMPT: ");
-                    LCD.Write(power[i]);
-                }
                 motor[i].SetPercent(power[i] * direction[i]);
             }
-            Sleep(0.01);
         }
         else{
             for(int i = 0; i < 3; ++i){
                 motor[i].Stop();
             }
-            LCD.WriteLine("");
+            state = "rotate";
+            init = true;
+        }
+    }
+
+    void rotate(){
+        if(init){
+            init = false;
+            for(int i = 0; i < 3; ++i){
+                encoder[i].ResetCounts();
+                oldCount[i] = 0;
+                newCount[i] = 0;
+            }
+            expectedSpeed[0] = 2;
+            expectedSpeed[1] = 2;
+            expectedSpeed[2] = 2;
+            direction[0] = 1;
+            direction[1] = 1;
+            direction[2] = 1;
+            power[0] = 20;
+            power[1] = 20;
+            power[2] = 20;
+            motor[0].SetPercent(power[0] * direction[0]);
+            motor[1].SetPercent(power[1] * direction[1]);
+            motor[2].SetPercent(power[2] * direction[2]);
+
+        }
+        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4. * M_PI / 3){
+            for(int i = 0; i < 3; ++i){ 
+                updateTime(i);
+                oldCount[i] = newCount[i];
+                newCount[i] = encoder[i].Counts();
+                actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
+                oldError[i] = newError[i];
+                newError[i] = expectedSpeed[i] - actualSpeed[i];
+                errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
+                errorSum[i] += newError[i];
+                PTerm[i] = newError[i] * PConst[i];
+                ITerm[i] = errorSum[i] * IConst[i];
+                DTerm[i] = errorDel[i] * DConst[i];
+                power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+                motor[i].SetPercent(power[i] * direction[i]);
+            }
+        }
+        else{
+            for(int i = 0; i < 3; ++i){
+                motor[i].Stop();
+            }
+            LCD.WriteLine("RotateRotateRotate");
             LCD.Write("Front: ");
             LCD.WriteLine(encoder[0].Counts());
             LCD.Write("Left: ");
@@ -490,7 +528,6 @@ State state;
 
 int main(){
     while(true){
-        state.updateTime();
         state.updateState();
     }
 
