@@ -5,9 +5,12 @@
 #include <FEHServo.h>
 #include <FEHAccel.h>
 #include <FEHBattery.h>
-#include <FEHBuzzerNoSleep.h>
 #include <FEHRCS.h>
 #include <FEHSD.h>
+
+#include <FEHBuzzerNoSleep.h>
+#include <text.h>
+
 #include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -417,8 +420,10 @@ class State{
 
         unsigned long newTime[3] = {0, 0, 0}, lastTime[3] = {0, 0, 0};
 
-        std::string state = "start";
+        std::string state = "startMenu";
         bool init = true;
+        
+        Text text;
 
     State(){
         for(int i = 0; i < 3; ++i){
@@ -480,7 +485,10 @@ class State{
     }
 
     void updateState(){
-        if(state == "start"){
+        if(state == "startMenu"){
+            startMenu();
+        }
+        else if(state == "start"){
             start(); 
         }
         else if(state == "rotate"){
@@ -488,6 +496,24 @@ class State{
         }
         else if(state == "moveToButton"){
             moveToButton();
+        }
+    }
+
+    void startMenu(){
+        if(init){
+            LCD.Clear();
+            init = false;
+        }
+        else if(text.button("Touch me", 0xffffff, 136, 100)){
+            text.display("YOU WILL GET TOUCHED.", 0xff0000, 100, 58);
+            Sleep(3.0);
+            state = "start";
+            init = true;
+        }
+        else if(text.button("Rotate", 0xffffff, 136, 120)){
+            Sleep(3.0);
+            state = "rotate";
+            init = true;
         }
     }
 
@@ -529,7 +555,7 @@ class State{
                 motor[i].SetPercent(power[i] * direction[i]);
             }
         }
-        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4. * M_PI / 2){
+        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 2.5 * M_PI / 2){
             PID();
         }
         else{
