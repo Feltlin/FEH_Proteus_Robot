@@ -534,6 +534,7 @@ FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor1, 9.0),
     FEHMotor(FEHMotor::Motor2, 9.0),
 };
+FEHServo armServo(FEHServo::Servo0);
 AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
 double inchPerCount = 2.5 * M_PI / 318;
 
@@ -601,7 +602,34 @@ void speedPID(){
     }
 }
 
+void vectorDirection(double x, double y){
+    vx = x;
+    vy = y;
+    expectedSpeed[0] = fabs(vx);
+    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    direction[0] = vx >= 0 ? -1 : 1;
+    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+}
+
+void motorSetPercent(double initPower){
+    for(int i = 0; i < 3; ++i){
+        power[i] = initPower;
+        motor[i].SetPercent(power[i] * direction[i]);
+    }
+}
+
+void motorStop(){
+    for(int i = 0; i < 3; ++i){
+        motor[i].Stop();
+    }
+}
+
 int main(){
+    armServo.SetMin(500);
+    armServo.SetMax(2500);
+
     //start menu
     zero();
     LCD.Clear();
@@ -611,6 +639,22 @@ int main(){
 
     //start
     zero();
+    vectorDirection(-4, 0);
+    motorSetPercent(15);
+
+    while(newCount[0] * inchPerCount < 18){
+        speedPID();
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    motorStop();
+    
+
+    //move up to the trunk
+    zero();
     expectedSpeed[1] = 6;
     expectedSpeed[2] = 6;
     direction[1] = -1;
@@ -619,51 +663,23 @@ int main(){
     power[2] = 20;
     motor[1].SetPercent(power[1] * direction[1]);
     motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 30){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8){
         speedPID();
         if(power[0] > 45){
             break;
         }
     }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
-    
-    // //rotate
-    // zero();
-    // for(int i = 0; i < 3; ++i){
-    //     expectedSpeed[i] = 4;
-    //     direction[i] = 1;
-    //     power[i] = 15;
-    //     motor[i].SetPercent(power[i] * direction[i]);
-    // }
-    // while((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4.4 * M_PI / 2){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
+    motorStop();
 
-    //left translation
+    //arm up
+    armServo.SetDegree(90.);
+
+    //left translation to pick up bucket
     zero();
-    vx = -4;
-    vy = 0;
-    expectedSpeed[0] = fabs(vx);
-    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    
-    for(int i = 0; i < 3; ++i){
-        power[i] = 15;
-        motor[i].SetPercent(power[i] * direction[i]);
-    }
+    vectorDirection(-4, 0);
+    motorSetPercent(15);
 
-    while(newCount[0] * inchPerCount < 10){
+    while(newCount[0] * inchPerCount < 3){
         speedPID();
         if(power[0] > 45){
             LCD.SetBackgroundColor(RED);
@@ -671,9 +687,21 @@ int main(){
             break;
         }
     }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    motorStop();
+
+    //arm up pick up bucket
+
+    //move backward to the ramp
+
+    //move up the ramp
+
+    //rotate 180 to align the arm to the table
+
+    //arm down to put down bucket
+
+    //right translation to put down bucket
+
+
 
     //backward touching the window
     zero();
@@ -691,9 +719,7 @@ int main(){
             break;
         }
     }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    motorStop();
 
     //left translation, open the window
     zero();
@@ -706,10 +732,7 @@ int main(){
     direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     
-    for(int i = 0; i < 3; ++i){
-        power[i] = 15;
-        motor[i].SetPercent(power[i] * direction[i]);
-    }
+    motorSetPercent(15);
 
     while(newCount[0] * inchPerCount < 8){
         speedPID();
@@ -719,9 +742,7 @@ int main(){
             break;
         }
     }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    motorStop();
 
     //after open window, go forward
     zero();
