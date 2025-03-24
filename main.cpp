@@ -611,6 +611,9 @@ void vectorDirection(double x, double y){
     direction[0] = vx >= 0 ? -1 : 1;
     direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    for(int i = 0; i < 3; ++i){
+        motor[i].SetPercent(expectedSpeed[i] * 4 * direction[i]);
+    }
 }
 
 void motorSetPercent(double initPower){
@@ -640,9 +643,8 @@ int main(){
     //start
     zero();
     vectorDirection(-4, 0);
-    motorSetPercent(15);
 
-    while(newCount[0] * inchPerCount < 18){
+    while(newCount[0] * inchPerCount < 15){
         speedPID();
         if(power[0] > 45){
             LCD.SetBackgroundColor(RED);
@@ -663,7 +665,7 @@ int main(){
     power[2] = 20;
     motor[1].SetPercent(power[1] * direction[1]);
     motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 6.5){
         speedPID();
         if(power[0] > 45){
             break;
@@ -676,8 +678,7 @@ int main(){
 
     //left translation to pick up bucket
     zero();
-    vectorDirection(-4, 0);
-    motorSetPercent(15);
+    vectorDirection(-6, 0);
 
     while(newCount[0] * inchPerCount < 3){
         speedPID();
