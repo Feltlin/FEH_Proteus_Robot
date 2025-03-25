@@ -536,12 +536,13 @@ FEHMotor motor[3] = {
 };
 FEHServo armServo(FEHServo::Servo0);
 AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
+
 double inchPerCount = 2.5 * M_PI / 318;
 
 //{Front, Left, Right}
 double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
 double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
-double PConst[3] = {0.3, 0.3, 0.3}, IConst[3] = {0.001, 0.001, 0.001}, DConst[3] = {0.05, 0.05, 0.05};
+double PConst[3] = {0.2, 0.2, 0.2}, IConst[3] = {0.003, 0.003, 0.003}, DConst[3] = {0.01, 0.01, 0.01};
 
 double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
 double power[3] = {0, 0, 0};
@@ -583,7 +584,7 @@ void zero(){
 }
 
 void speedPID(){
-    Sleep(10);
+    Sleep(15);
     for(int i = 0; i < 3; ++i){
         oldTime[i] = newTime[i];
         newTime[i] = TimeNowMSec();
@@ -603,17 +604,19 @@ void speedPID(){
 }
 
 void vectorDirection(double x, double y){
-    vx = x;
-    vy = y;
+    double vx = x;
+    double vy = y;
     expectedSpeed[0] = fabs(vx);
     expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
     expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
     direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    for(int i = 0; i < 3; ++i){
-        motor[i].SetPercent(expectedSpeed[i] * 4 * direction[i]);
-    }
+    direction[1] = (vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0) ? 1 : -1;
+    direction[2] = (vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0) ? 1 : -1;
+    // for(int i = 0; i < 3; ++i){
+    //     power[i] = expectedSpeed[i] * 4.5 * direction[i];
+    //     motor[i].SetPercent(expectedSpeed[i] * 4.5 * direction[i]);
+    // }
+    // For some reason, trying to initialize the power makes the whole thing super inconsistent, safer to let it ramp up to speed
 }
 
 void motorSetPercent(double initPower){
@@ -629,7 +632,43 @@ void motorStop(){
     }
 }
 
+int currentDebugSection = 0;
+void DebugLogSection(FEHFile *overview, FEHFile *detailed, int sectionNumber)
+{
+    if (currentDebugSection != sectionNumber)
+    {
+        SD.FPrintf(overview, "Beginning Section %d\nCurrent Time: %f\n\n", sectionNumber, TimeNow());
+        SD.FPrintf(detailed, "Beginning Section %d\nCurrent Time: %f\n\n", sectionNumber, TimeNow());
+        currentDebugSection = sectionNumber;
+    }
+    SD.FPrintf(detailed, "Front: Expected - %f, Actual - %f\n", expectedSpeed[0], actualSpeed[0]);
+    SD.FPrintf(detailed, "Left: Expected - %f, Actual - %f\n", expectedSpeed[1], actualSpeed[1]);
+    SD.FPrintf(detailed, "Right: Expected - %f, Actual - %f\n\n", expectedSpeed[2], actualSpeed[2]);
+}
+
+void FinalizeDebugging(FEHFile *overview, int sectionNumber)
+{
+    SD.FPrintf(overview, "Section stats:\n\n");
+    SD.FPrintf(overview, "Front Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[0].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[0]);
+
+    SD.FPrintf(overview, "Left Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[1].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[1]);
+
+    
+    SD.FPrintf(overview, "Right Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[2].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[2]);
+
+    SD.FPrintf(overview, "Ending Section %d\nCurrent Time: %f\n\n", sectionNumber, TimeNow());
+}
+
 int main(){
+    FEHFile *detailedFptr = SD.FOpen("Detailed.txt","w");
+    FEHFile *overviewFptr = SD.FOpen("Overview.txt","w");
+
     armServo.SetMin(500);
     armServo.SetMax(2500);
 
@@ -637,40 +676,40 @@ int main(){
     zero();
     LCD.Clear();
     while(!text.button("Touch me", 0xffffff, 136, 100)){}
-    text.display("YOU WILL GET TOUCHED.", 0xff0000, 100, 58);
+    text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
     Sleep(3.0);
 
     //start
     zero();
-    vectorDirection(-4, 0);
+    vectorDirection(-6, 0);
 
     while(newCount[0] * inchPerCount < 15){
         speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 1);
         if(power[0] > 45){
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
             break;
         }
     }
+    FinalizeDebugging(overviewFptr, 1);
     motorStop();
     
 
     //move up to the trunk
     zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = -1;
-    direction[2] = 1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
+    vectorDirection(0, 6);
+
     while((newCount[1] + newCount[2]) / 2 * inchPerCount < 6.5){
         speedPID();
-        if(power[0] > 45){
+        DebugLogSection(overviewFptr, detailedFptr, 2);
+        if(power[1] > 45 || power[2] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
             break;
         }
     }
+    FinalizeDebugging(overviewFptr, 2);
     motorStop();
 
     //arm up
@@ -682,12 +721,14 @@ int main(){
 
     while(newCount[0] * inchPerCount < 3){
         speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 3);
         if(power[0] > 45){
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
             break;
         }
     }
+    FinalizeDebugging(overviewFptr, 3);
     motorStop();
 
     //arm up pick up bucket
@@ -704,210 +745,212 @@ int main(){
 
 
 
-    //backward touching the window
-    zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = 1;
-    direction[2] = -1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-        speedPID();
-        if(power[0] > 45){
-            break;
-        }
-    }
-    motorStop();
+    // //backward touching the window
+    // zero();
+    // expectedSpeed[1] = 6;
+    // expectedSpeed[2] = 6;
+    // direction[1] = 1;
+    // direction[2] = -1;
+    // power[1] = 20;
+    // power[2] = 20;
+    // motor[1].SetPercent(power[1] * direction[1]);
+    // motor[2].SetPercent(power[2] * direction[2]);
+    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         break;
+    //     }
+    // }
+    // motorStop();
 
-    //left translation, open the window
-    zero();
-    vx = -4;
-    vy = 0;
-    expectedSpeed[0] = fabs(vx);
-    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // //left translation, open the window
+    // zero();
+    // vx = -4;
+    // vy = 0;
+    // expectedSpeed[0] = fabs(vx);
+    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    // direction[0] = vx >= 0 ? -1 : 1;
+    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     
-    motorSetPercent(15);
+    // motorSetPercent(15);
 
-    while(newCount[0] * inchPerCount < 8){
-        speedPID();
-        if(power[0] > 45){
-            LCD.SetBackgroundColor(RED);
-            LCD.Clear();
-            break;
-        }
-    }
-    motorStop();
+    // while(newCount[0] * inchPerCount < 8){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
+    // motorStop();
 
-    //after open window, go forward
-    zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = -1;
-    direction[2] = 1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-        speedPID();
-        if(power[0] > 45){
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    // //after open window, go forward
+    // zero();
+    // expectedSpeed[1] = 6;
+    // expectedSpeed[2] = 6;
+    // direction[1] = -1;
+    // direction[2] = 1;
+    // power[1] = 20;
+    // power[2] = 20;
+    // motor[1].SetPercent(power[1] * direction[1]);
+    // motor[2].SetPercent(power[2] * direction[2]);
+    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
 
-    //after open window, left translation
-    zero();
-    vx = -4;
-    vy = 0;
-    expectedSpeed[0] = fabs(vx);
-    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // //after open window, left translation
+    // zero();
+    // vx = -4;
+    // vy = 0;
+    // expectedSpeed[0] = fabs(vx);
+    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    // direction[0] = vx >= 0 ? -1 : 1;
+    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     
-    for(int i = 0; i < 3; ++i){
-        power[i] = 15;
-        motor[i].SetPercent(power[i] * direction[i]);
-    }
+    // for(int i = 0; i < 3; ++i){
+    //     power[i] = 15;
+    //     motor[i].SetPercent(power[i] * direction[i]);
+    // }
 
-    while(newCount[0] * inchPerCount < 0.5){
-        speedPID();
-        if(power[0] > 45){
-            LCD.SetBackgroundColor(RED);
-            LCD.Clear();
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    // while(newCount[0] * inchPerCount < 0.5){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
 
-    //after open window, backward touching the window
-    zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = 1;
-    direction[2] = -1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-        speedPID();
-        if(power[0] > 45){
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    // //after open window, backward touching the window
+    // zero();
+    // expectedSpeed[1] = 6;
+    // expectedSpeed[2] = 6;
+    // direction[1] = 1;
+    // direction[2] = -1;
+    // power[1] = 20;
+    // power[2] = 20;
+    // motor[1].SetPercent(power[1] * direction[1]);
+    // motor[2].SetPercent(power[2] * direction[2]);
+    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
 
-    //right translation, close the window
-    zero();
-    vx = 4;
-    vy = 0;
-    expectedSpeed[0] = fabs(vx);
-    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // //right translation, close the window
+    // zero();
+    // vx = 4;
+    // vy = 0;
+    // expectedSpeed[0] = fabs(vx);
+    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    // direction[0] = vx >= 0 ? -1 : 1;
+    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     
-    for(int i = 0; i < 3; ++i){
-        power[i] = 15;
-        motor[i].SetPercent(power[i] * direction[i]);
-    }
+    // for(int i = 0; i < 3; ++i){
+    //     power[i] = 15;
+    //     motor[i].SetPercent(power[i] * direction[i]);
+    // }
 
-    while(newCount[0] * inchPerCount < 6){
-        speedPID();
-        if(power[0] > 45){
-            LCD.SetBackgroundColor(RED);
-            LCD.Clear();
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    // while(newCount[0] * inchPerCount < 6){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
 
-    //after close window, go forward
-    zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = -1;
-    direction[2] = 1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-        speedPID();
-        if(power[0] > 45){
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
+    // //after close window, go forward
+    // zero();
+    // expectedSpeed[1] = 6;
+    // expectedSpeed[2] = 6;
+    // direction[1] = -1;
+    // direction[2] = 1;
+    // power[1] = 20;
+    // power[2] = 20;
+    // motor[1].SetPercent(power[1] * direction[1]);
+    // motor[2].SetPercent(power[2] * direction[2]);
+    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
 
-    //right translation
-    zero();
-    vx = 4;
-    vy = 0;
-    expectedSpeed[0] = fabs(vx);
-    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    direction[0] = vx >= 0 ? -1 : 1;
-    direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // //right translation
+    // zero();
+    // vx = 4;
+    // vy = 0;
+    // expectedSpeed[0] = fabs(vx);
+    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    // direction[0] = vx >= 0 ? -1 : 1;
+    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
+    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
     
-    for(int i = 0; i < 3; ++i){
-        power[i] = 15;
-        motor[i].SetPercent(power[i] * direction[i]);
-    }
+    // for(int i = 0; i < 3; ++i){
+    //     power[i] = 15;
+    //     motor[i].SetPercent(power[i] * direction[i]);
+    // }
 
-    while(newCount[0] * inchPerCount < 12){
-        speedPID();
-        if(power[0] > 45){
-            LCD.SetBackgroundColor(RED);
-            LCD.Clear();
-            break;
-        }
-    }
+    // while(newCount[0] * inchPerCount < 12){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
+    // for(int i = 0; i < 3; ++i){
+    //     motor[i].Stop();
+    // }
+
+    // //down slope back to start
+    // zero();
+    // expectedSpeed[1] = 6;
+    // expectedSpeed[2] = 6;
+    // direction[1] = 1;
+    // direction[2] = -1;
+    // power[1] = 20;
+    // power[2] = 20;
+    // motor[1].SetPercent(power[1] * direction[1]);
+    // motor[2].SetPercent(power[2] * direction[2]);
+    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 35){
+    //     speedPID();
+    //     if(power[0] > 45){
+    //         break;
+    //     }
+    // }
     for(int i = 0; i < 3; ++i){
         motor[i].Stop();
     }
 
-    //down slope back to start
-    zero();
-    expectedSpeed[1] = 6;
-    expectedSpeed[2] = 6;
-    direction[1] = 1;
-    direction[2] = -1;
-    power[1] = 20;
-    power[2] = 20;
-    motor[1].SetPercent(power[1] * direction[1]);
-    motor[2].SetPercent(power[2] * direction[2]);
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 35){
-        speedPID();
-        if(power[0] > 45){
-            break;
-        }
-    }
-    for(int i = 0; i < 3; ++i){
-        motor[i].Stop();
-    }
-
+    SD.FClose(overviewFptr);
+    SD.FClose(detailedFptr);
     return 0;
 }
