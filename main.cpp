@@ -672,6 +672,8 @@ int main(){
     armServo.SetMin(500);
     armServo.SetMax(2500);
 
+    SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.)/1.5);
+
     //start menu
     zero();
     LCD.Clear();
@@ -679,11 +681,26 @@ int main(){
     text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
     Sleep(3.0);
 
-    //start
+    //initial move up
+    armServo.SetDegree(180.);
+    zero();
+    vectorDirection(0, 6);
+
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 3){
+        speedPID();
+        if(power[1] > 45 || power[2] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    motorStop();
+
+    //move left
     zero();
     vectorDirection(-6, 0);
 
-    while(newCount[0] * inchPerCount < 15){
+    while(newCount[0] * inchPerCount < 13){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 1);
         if(power[0] > 45){
@@ -700,7 +717,7 @@ int main(){
     zero();
     vectorDirection(0, 6);
 
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 6.5){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 2);
         if(power[1] > 45 || power[2] > 45){
@@ -713,13 +730,13 @@ int main(){
     motorStop();
 
     //arm up
-    armServo.SetDegree(90.);
+    armServo.SetDegree(153.);
 
     //left translation to pick up bucket
     zero();
     vectorDirection(-6, 0);
 
-    while(newCount[0] * inchPerCount < 3){
+    while(newCount[0] * inchPerCount < 7){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 3);
         if(power[0] > 45){
@@ -732,16 +749,101 @@ int main(){
     motorStop();
 
     //arm up pick up bucket
+    armServo.SetDegree(110.);
+    Sleep(0.5);
 
-    //move backward to the ramp
+    //move back after pick up bucket
+    zero();
+    vectorDirection(0, -6);
+
+    while(newCount[0] * inchPerCount < 5){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 4);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 4);
+    motorStop();
+
+    //move right to the ramp
+    zero();
+    vectorDirection(6, 0);
+
+    while(newCount[0] * inchPerCount < 13){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 5);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 5);
+    motorStop();
 
     //move up the ramp
+    zero();
+    vectorDirection(0, 6);
 
-    //rotate 180 to align the arm to the table
+    while(newCount[0] * inchPerCount < 10){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 6);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 6);
+    motorStop();
+
+    //rotate 90 degrees to align the arm to the table
+    zero();
+    expectedSpeed[0] = 4;
+    expectedSpeed[1] = 4;
+    expectedSpeed[2] = 4;
+    direction[0] = -1;
+    direction[1] = -1;
+    direction[2] = -1;
+
+    while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 2.65 * M_PI / 2){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 7);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 7);
+    motorStop();
 
     //arm down to put down bucket
+    armServo.SetDegree(115.);
+    Sleep(0.5);
 
-    //right translation to put down bucket
+    //backwards translation, leave bucket on table
+    zero();
+    vectorDirection(0, -6);
+
+    while(newCount[0] * inchPerCount < 3.5){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 8);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 8);
+    motorStop();
+
+    //left translation to align with fertilizer levers
+    int lever = RCS.GetLever();
+    SD.FPrintf(overviewFptr, "Lever: %f\n\n", lever);
 
 
 
