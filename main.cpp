@@ -9,7 +9,7 @@
 #include <FEHSD.h>
 
 #include <FEHBuzzerNoSleep.h>
-#include <text.h>
+// #include <text.h>
 
 #include <string>
 #define _USE_MATH_DEFINES
@@ -559,7 +559,7 @@ int sweepCount = 0;
 float minCDS = 3;
 std::string lightColor = "nothing";
 
-Text text;
+// Text text;
 
 void zero(){
     for(int i = 0; i < 3; ++i){
@@ -677,8 +677,8 @@ int main(){
     //start menu
     zero();
     LCD.Clear();
-    while(!text.button("Touch me", 0xffffff, 136, 100)){}
-    text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
+    // while(!text.button("Touch me", 0xffffff, 136, 100)){}
+    // text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
     Sleep(3.0);
 
     //initial move up
