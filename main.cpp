@@ -542,7 +542,7 @@ double inchPerCount = 2.5 * M_PI / 318;
 //{Front, Left, Right}
 double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
 double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
-double PConst[3] = {0.2, 0.2, 0.2}, IConst[3] = {0.003, 0.003, 0.003}, DConst[3] = {0.01, 0.01, 0.01};
+double PConst[3] = {0.4, 0.4, 0.4}, IConst[3] = {0.02, 0.02, 0.02}, DConst[3] = {0.01, 0.01, 0.01};
 
 double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
 double power[3] = {0, 0, 0};
@@ -668,7 +668,7 @@ void FinalizeDebugging(FEHFile *overview, int sectionNumber)
 int main(){
     FEHFile *detailedFptr = SD.FOpen("Detailed.txt","w");
     FEHFile *overviewFptr = SD.FOpen("Overview.txt","w");
-
+    
     armServo.SetMin(500);
     armServo.SetMax(2500);
 
@@ -717,7 +717,7 @@ int main(){
     zero();
     vectorDirection(0, 6);
 
-    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8.2){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 2);
         if(power[1] > 45 || power[2] > 45){
@@ -729,14 +729,14 @@ int main(){
     FinalizeDebugging(overviewFptr, 2);
     motorStop();
 
-    //arm up
-    armServo.SetDegree(153.);
+    //arm down
+    armServo.SetDegree(155.);
 
     //left translation to pick up bucket
     zero();
     vectorDirection(-6, 0);
 
-    while(newCount[0] * inchPerCount < 7){
+    while(newCount[0] * inchPerCount < 5.45){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 3);
         if(power[0] > 45){
@@ -749,14 +749,21 @@ int main(){
     motorStop();
 
     //arm up pick up bucket
-    armServo.SetDegree(110.);
-    Sleep(0.5);
+    armServo.SetDegree(100.);
+    // Used to be 110 but it hits the window
+    Sleep(1.0);
+    armServo.SetDegree(80.);
+
+    Sleep(1.0);
+    armServo.SetDegree(60.);
+    // Used to be 110 but it hits the window
+    Sleep(1.0);
 
     //move back after pick up bucket
     zero();
     vectorDirection(0, -6);
 
-    while(newCount[0] * inchPerCount < 5){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 5){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 4);
         if(power[0] > 45){
@@ -768,11 +775,32 @@ int main(){
     FinalizeDebugging(overviewFptr, 4);
     motorStop();
 
+    //turn slightly right
+    zero();
+    expectedSpeed[0] = 6;
+    expectedSpeed[1] = 6;
+    expectedSpeed[2] = 6;
+    direction[0] = -1;
+    direction[1] = -1;
+    direction[2] = -1;
+
+    while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.2 * M_PI / 2){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 7);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 7);
+    motorStop();
+
     //move right to the ramp
     zero();
     vectorDirection(6, 0);
 
-    while(newCount[0] * inchPerCount < 13){
+    while(newCount[0] * inchPerCount < 19.75){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 5);
         if(power[0] > 45){
@@ -788,7 +816,7 @@ int main(){
     zero();
     vectorDirection(0, 6);
 
-    while(newCount[0] * inchPerCount < 10){
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 30){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 6);
         if(power[0] > 45){
@@ -802,14 +830,14 @@ int main(){
 
     //rotate 90 degrees to align the arm to the table
     zero();
-    expectedSpeed[0] = 4;
-    expectedSpeed[1] = 4;
-    expectedSpeed[2] = 4;
+    expectedSpeed[0] = 6;
+    expectedSpeed[1] = 6;
+    expectedSpeed[2] = 6;
     direction[0] = -1;
     direction[1] = -1;
     direction[2] = -1;
 
-    while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 2.65 * M_PI / 2){
+    while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 4.05 * M_PI / 2){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 7);
         if(power[0] > 45){
@@ -821,15 +849,77 @@ int main(){
     FinalizeDebugging(overviewFptr, 7);
     motorStop();
 
+    //move forwards to normalize location. Front wheel against right wall by table.
+    zero();
+    vectorDirection(0, 6);
+
+    while((newCount[1] + newCount[2]) / 2 * inchPerCount < 3.6){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 6);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 6);
+    motorStop();
+
     //arm down to put down bucket
-    armServo.SetDegree(115.);
+    float stepRate = 4.28;
+    for (int i=0; i<15; i++)
+    {
+        armServo.SetDegree(60.0+i*stepRate);
+        Sleep(0.15);
+    }
+    armServo.SetDegree(60.0+15*stepRate);
     Sleep(0.5);
 
-    //backwards translation, leave bucket on table
+    //left (forward from above) translation, push bucket further onto table
     zero();
-    vectorDirection(0, -6);
+    vectorDirection(-6, 0);
 
-    while(newCount[0] * inchPerCount < 3.5){
+    while(newCount[0] / 2 * inchPerCount < 3.5){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 3);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 8);
+    motorStop();
+
+    armServo.SetDegree(60.0+15*stepRate-0.3);
+    Sleep(0.5);
+
+    //turn slightly right
+    zero();
+    expectedSpeed[0] = 6;
+    expectedSpeed[1] = 6;
+    expectedSpeed[2] = 6;
+    direction[0] = -1;
+    direction[1] = -1;
+    direction[2] = -1;
+
+    while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.2 * M_PI / 2){
+        speedPID();
+        DebugLogSection(overviewFptr, detailedFptr, 7);
+        if(power[0] > 45){
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+    FinalizeDebugging(overviewFptr, 7);
+    motorStop();
+
+    //rightwards (backward from above) translation, leave bucket on table
+    zero();
+    vectorDirection(6, 0);
+
+    while(newCount[0] / 2 * inchPerCount < 7){
         speedPID();
         DebugLogSection(overviewFptr, detailedFptr, 8);
         if(power[0] > 45){
