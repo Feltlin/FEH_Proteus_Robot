@@ -525,9 +525,9 @@ void fiveRevolution(){
 // };
 
 DigitalEncoder encoder[3] = {
-    DigitalEncoder(FEHIO::P0_0),
     DigitalEncoder(FEHIO::P0_1),
     DigitalEncoder(FEHIO::P0_2),
+    DigitalEncoder(FEHIO::P0_3),
 };
 FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor0, 9.0),
@@ -535,7 +535,8 @@ FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor2, 9.0),
 };
 FEHServo armServo(FEHServo::Servo0);
-AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
+FEHServo prongServo(FEHServo::Servo1);
+AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_0);
 
 
 double inchPerCount = 2.5 * M_PI / 318;
@@ -753,6 +754,8 @@ int main(){
     
     armServo.SetMin(500);
     armServo.SetMax(2500);
+    prongServo.SetMin(820);
+    prongServo.SetMax(2205);
 
     SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.)/1.5*100.);
 
@@ -763,18 +766,28 @@ int main(){
     // text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
     
     // wait for light to start
+
     while (CDS() > 0.9)
     {
         // do nothing
     }
+
+    zero();
     
-    moveVectorDistance(0, -6, 2, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 2, std::string("Move Forward"), overviewFptr, detailedFptr);
+    prongServo.SetDegree(0);
+    moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 1.5, std::string("Move Forward"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 1, std::string("Move Forward"), overviewFptr, detailedFptr);
     rotateDegrees(-135, overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 5, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, -6, 0.5, std::string("Back up slightly"), overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 3, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 3.5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 4, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -3, 0.5, std::string("Back up slightly"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 1.75, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+
+    for (int i=1; i<181; i++)
+    {
+        prongServo.SetDegree(i);
+    }
 
     //initial move up
     // armServo.SetDegree(180.);
