@@ -652,16 +652,16 @@ void FinalizeDebugging(FEHFile *overview, std::string sectionName)
 {
     SD.FPrintf(overview, "Section stats:\n\n");
     SD.FPrintf(overview, "Front Wheel:\n");
-    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[0].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[0] * inchPerCount);
     SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[0]);
 
     SD.FPrintf(overview, "Left Wheel:\n");
-    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[1].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[1] * inchPerCount);
     SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[1]);
 
     
     SD.FPrintf(overview, "Right Wheel:\n");
-    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)encoder[2].Counts() * inchPerCount);
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[2] * inchPerCount);
     SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[2]);
 
     SD.FPrintf(overview, "END Section:\n%s\nCurrent Time: %f\n\n\n", sectionName.c_str(), TimeNow());
@@ -736,7 +736,7 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
 void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     zero();  // Reset encoders
 
-    double robotRadius = 4.025; // Adjust based on your robot's actual radius (in inches)
+    double robotRadius = 3.9375; // Adjust based on your robot's actual radius (in inches)
     double arcLength = (2 * M_PI * robotRadius * fabs(degrees)) / 360.0;
 
     // Set wheel directions for rotation (all wheels move the same way)
@@ -774,6 +774,21 @@ void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     Sleep(0.5);
 }
 
+void servoSetDegree(int angle0, int angle1){
+    if(angle0 < angle1){
+        for (int i = angle0; i <= angle1; i++){
+            prongServo.SetDegree(i);
+        }
+    }
+    else{
+        for (int i = angle0; i >= angle1; i--){
+            prongServo.SetDegree(i);
+        }
+    }
+    
+    Sleep(1.);
+}
+
 
 
 int main(){
@@ -787,665 +802,38 @@ int main(){
 
     SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.)/1.5*100.);
 
-    //start menu
     zero();
     LCD.Clear();
-    // while(!text.button("Touch me", 0xffffff, 136, 100)){}
-    // text.display("Touch Detected, Starting Soon", 0xff0000, 50, 58);
-    
-    // wait for light to start
-
-    while (CDS() > 0.9)
-    {
-        // do nothing
-    }
-
-    zero();
-    
+    // Wait for light
     prongServo.SetDegree(0);
+    while (CDS() > 0.9){}
+
+    // Start
     moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 1.5, std::string("Move Forward"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 1, std::string("Move Forward"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 2.5, std::string("Move Forward"), overviewFptr, detailedFptr);
+
+    // Compost bin
     rotateDegrees(-135, overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 3.5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 4, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, -3, 0.5, std::string("Back up slightly"), overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 1.75, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -3, 0.75, std::string("Back up slightly"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(150, 1);
+    moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(150, 1);
+    moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+
+    // Apple bucket
+    moveVectorDistance(0, -6, 23, std::string("Back up"), overviewFptr, detailedFptr);
+    rotateDegrees(180, overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 8, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
 
-    for (int i=1; i<181; i++)
-    {
-        prongServo.SetDegree(i);
-    }
-
-    //initial move up
-    // armServo.SetDegree(180.);
-    // zero();
-    // vectorDirection(0, 6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 3){
-    //     speedPID();
-    //     if(power[1] > 45 || power[2] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // motorStop();
-
-    // //move left
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] * inchPerCount < 13){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 1);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 1);
-    // motorStop();
-    
-
-    // //move up to the trunk
-    // zero();
-    // vectorDirection(0, 6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 8.2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 2);
-    //     if(power[1] > 45 || power[2] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 2);
-    // motorStop();
-
-    // //arm down
-    // armServo.SetDegree(158.);
-
-    // //left translation to pick up bucket
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] * inchPerCount < 5.45){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 3);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 3);
-    // motorStop();
-
-    // // arm up to pick up bucket
-    // for (int i=0; i<38; i++)
-    // {
-    //     armServo.SetDegree(158. - (i*2.5));
-    //     Sleep(0.1);
-    // }
-    // armServo.SetDegree(63.);
-    // // Used to be 110 but it hits the window
-    // Sleep(1.0);
-
-    // //move back after pick up bucket
-    // zero();
-    // vectorDirection(0, -6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 5){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 4);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 4);
-    // motorStop();
-
-    // //turn slightly right
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = -1;
-    // direction[1] = -1;
-    // direction[2] = -1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.2 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 7);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 7);
-    // motorStop();
-
-    // //move right to the ramp
-    // zero();
-    // vectorDirection(6, 0);
-
-    // while(newCount[0] * inchPerCount < 19.55){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 5);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 5);
-    // motorStop();
-
-    // //move up the ramp
-    // zero();
-    // vectorDirection(0, 6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 30){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 6);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 6);
-    // motorStop();
-
-    // //rotate 90 degrees to align the arm to the table
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = -1;
-    // direction[1] = -1;
-    // direction[2] = -1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 4.05 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 7);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 7);
-    // motorStop();
-
-    // //move forwards to normalize location. Front wheel against right wall by table.
-    // zero();
-    // vectorDirection(0, 6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 3.6){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 6);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 6);
-    // motorStop();
-
-    // //arm down to put down bucket
-    // float stepRate = 4.28;
-    // for (int i=0; i<15; i++)
-    // {
-    //     armServo.SetDegree(63.0+i*stepRate);
-    //     Sleep(0.15);
-    // }
-    // armServo.SetDegree(129);
-    // Sleep(0.5);
-
-    // //left (forward from above) translation, push bucket further onto table
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 3);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 8);
-    // motorStop();
-
-    // // armServo.SetDegree(60.0+15*stepRate-0.3);
-    // // Sleep(0.5);
-
-    // //turn slightly right
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = -1;
-    // direction[1] = -1;
-    // direction[2] = -1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.2 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 7);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 7);
-    // motorStop();
-    // Sleep(1.0);
-
-    // //rightwards (backward from above) translation, leave bucket on table
-    // zero();
-    // vectorDirection(6, 0);
-
-    // while(newCount[0] / 2 * inchPerCount < 4){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 5);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 8);
-    // motorStop();
-
-    // //turn slightly left
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = 1;
-    // direction[1] = 1;
-    // direction[2] = 1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.2 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 9);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 9);
-    // motorStop();
-    // Sleep(1.0);
-
-    // //move backwards (left from above) after bucket free
-    // zero();
-    // vectorDirection(0, -6);
-
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 5){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 6);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 6);
-    // motorStop();
-
-    // //left (forward from above) translation, line up before 45 degree rotation
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] / 2 * inchPerCount < 3){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 5);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 8);
-    // motorStop();
-
-    // int lever = 1/*RCS.GetLever()*/;
-    // SD.FPrintf(overviewFptr, "Lever: %f\n\n", lever);
-
-    // //rotate 45 degrees to align the arm to the table
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = 1;
-    // direction[1] = 1;
-    // direction[2] = 1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 1.95 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 7);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 7);
-    // motorStop();
-
-    // //left (forward from above) translation, go towards fertilizer lever
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] / 2 * inchPerCount < 4.5){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 8);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 8);
-    // motorStop();
-
-    // // //move forward slightly, align perfect with levers
-    // // zero();
-    // // vectorDirection(0, 6);
-
-    // // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 0.5){
-    // //     speedPID();
-    // //     DebugLogSection(overviewFptr, detailedFptr, 6);
-    // //     if(power[0] > 45){
-    // //         LCD.SetBackgroundColor(RED);
-    // //         LCD.Clear();
-    // //         break;
-    // //     }
-    // // }
-    // // FinalizeDebugging(overviewFptr, 6);
-    // // motorStop();
-
-    // if (lever == 0 || lever == 2)
-    // {
-    //     int leverDirection = 1;
-    //     if (lever == 0)
-    //     {
-    //         leverDirection == -1;
-    //     }
-    //     //align to correct lever (forward/backwards)
-    //     zero();
-    //     vectorDirection(0, 6*leverDirection);
-
-    //     while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2.5){
-    //         speedPID();
-    //         DebugLogSection(overviewFptr, detailedFptr, 6);
-    //         if(power[0] > 45){
-    //             LCD.SetBackgroundColor(RED);
-    //             LCD.Clear();
-    //             break;
-    //         }
-    //     }
-    //     FinalizeDebugging(overviewFptr, 6);
-    //     motorStop();
-    // }
-    // Sleep(1.0);
-
-    // //turn slightly right
-    // zero();
-    // expectedSpeed[0] = 6;
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[0] = -1;
-    // direction[1] = -1;
-    // direction[2] = -1;
-
-    // while((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 0.25 * M_PI / 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 7);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 7);
-    // motorStop();
-    // Sleep(1.0);
-
-
-    // //left (forward from above) translation, Hit Correct Lever
-    // zero();
-    // vectorDirection(-6, 0);
-
-    // while(newCount[0] / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     DebugLogSection(overviewFptr, detailedFptr, 8);
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // FinalizeDebugging(overviewFptr, 8);
-    // motorStop();
-
-    // armServo.SetDegree(175);
-
-
-
-    // //backward touching the window
-    // zero();
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[1] = 1;
-    // direction[2] = -1;
-    // power[1] = 20;
-    // power[2] = 20;
-    // motor[1].SetPercent(power[1] * direction[1]);
-    // motor[2].SetPercent(power[2] * direction[2]);
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
-    // motorStop();
-
-    // //left translation, open the window
-    // zero();
-    // vx = -4;
-    // vy = 0;
-    // expectedSpeed[0] = fabs(vx);
-    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    // direction[0] = vx >= 0 ? -1 : 1;
-    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    
-    // motorSetPercent(15);
-
-    // while(newCount[0] * inchPerCount < 8){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // motorStop();
-
-    // //after open window, go forward
-    // zero();
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[1] = -1;
-    // direction[2] = 1;
-    // power[1] = 20;
-    // power[2] = 20;
-    // motor[1].SetPercent(power[1] * direction[1]);
-    // motor[2].SetPercent(power[2] * direction[2]);
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //after open window, left translation
-    // zero();
-    // vx = -4;
-    // vy = 0;
-    // expectedSpeed[0] = fabs(vx);
-    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    // direction[0] = vx >= 0 ? -1 : 1;
-    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    
-    // for(int i = 0; i < 3; ++i){
-    //     power[i] = 15;
-    //     motor[i].SetPercent(power[i] * direction[i]);
-    // }
-
-    // while(newCount[0] * inchPerCount < 0.5){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //after open window, backward touching the window
-    // zero();
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[1] = 1;
-    // direction[2] = -1;
-    // power[1] = 20;
-    // power[2] = 20;
-    // motor[1].SetPercent(power[1] * direction[1]);
-    // motor[2].SetPercent(power[2] * direction[2]);
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //right translation, close the window
-    // zero();
-    // vx = 4;
-    // vy = 0;
-    // expectedSpeed[0] = fabs(vx);
-    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    // direction[0] = vx >= 0 ? -1 : 1;
-    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    
-    // for(int i = 0; i < 3; ++i){
-    //     power[i] = 15;
-    //     motor[i].SetPercent(power[i] * direction[i]);
-    // }
-
-    // while(newCount[0] * inchPerCount < 6){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //after close window, go forward
-    // zero();
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[1] = -1;
-    // direction[2] = 1;
-    // power[1] = 20;
-    // power[2] = 20;
-    // motor[1].SetPercent(power[1] * direction[1]);
-    // motor[2].SetPercent(power[2] * direction[2]);
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 2){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //right translation
-    // zero();
-    // vx = 4;
-    // vy = 0;
-    // expectedSpeed[0] = fabs(vx);
-    // expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
-    // expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
-    // direction[0] = vx >= 0 ? -1 : 1;
-    // direction[1] = vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    // direction[2] = vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0 ? 1 : -1;
-    
-    // for(int i = 0; i < 3; ++i){
-    //     power[i] = 15;
-    //     motor[i].SetPercent(power[i] * direction[i]);
-    // }
-
-    // while(newCount[0] * inchPerCount < 12){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         LCD.SetBackgroundColor(RED);
-    //         LCD.Clear();
-    //         break;
-    //     }
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     motor[i].Stop();
-    // }
-
-    // //down slope back to start
-    // zero();
-    // expectedSpeed[1] = 6;
-    // expectedSpeed[2] = 6;
-    // direction[1] = 1;
-    // direction[2] = -1;
-    // power[1] = 20;
-    // power[2] = 20;
-    // motor[1].SetPercent(power[1] * direction[1]);
-    // motor[2].SetPercent(power[2] * direction[2]);
-    // while((newCount[1] + newCount[2]) / 2 * inchPerCount < 35){
-    //     speedPID();
-    //     if(power[0] > 45){
-    //         break;
-    //     }
-    // }
     for(int i = 0; i < 3; ++i){
         motor[i].Stop();
     }
