@@ -671,35 +671,63 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
     zero();
     vectorDirection(x, y);
 
-    double totalWeightedDistance = 0;
-    int contributingWheels = 0;
+    double projx = 0;
+    double projy = 0;
 
-    while (true) {
-        totalWeightedDistance = 0;
-        contributingWheels = 0;
-
-        // Calculate weighted encoder distance
-        for (int i = 0; i < 3; i++) {
-            if (expectedSpeed[i] > 0) { // Avoid division by zero
-                totalWeightedDistance += newCount[i] / expectedSpeed[i];
-                contributingWheels++;
-            }
-        }
-
-        if (contributingWheels > 0) {
-            double avgDistance = (totalWeightedDistance / contributingWheels) * inchPerCount * 3;
-            if (avgDistance >= targetDistance) break;
-        }
-
-        speedPID(); // Adjust motor speeds
+    while(projx * projx + projy * projy < targetDistance * targetDistance){
+        speedPID();
+        // projx = inchPerCount * (newCount[0] + newCount[1] * cos(M_PI / 3) + newCount[2] * cos(M_PI / 3));
+        // projy = inchPerCount * (newCount[1] * sin(M_PI / 3) + newCount[2] * sin(M_PI / 3));
+        projx += inchPerCount * (-2 * (newCount[0] - oldCount[0]) + (1 - 2 / sqrt(3)) * (newCount[1] - oldCount[1]) + (1 + 2 / sqrt(3)) * (newCount[2] - oldCount[2]));
+        projy += inchPerCount * (1 / sqrt(3) * (newCount[1] - oldCount[1]) - 1 / sqrt(3) * (newCount[2] - oldCount[2]));
         DebugLogSection(overview, detailed, debugName);
-        // Emergency stop condition
-        if (power[0] > 45 || power[1] > 45 || power[2] > 45) {
+
+        if (power[0] > 45) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
+            LCD.WriteLine("Front wheel: Power over 45");
+            break;
+        }
+        if (power[1] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Left wheel: Power over 45");
+            break;
+        }
+        if (power[2] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Right Wheel: Power over 45");
             break;
         }
     }
+
+    // while (true) {
+    //     totalWeightedDistance = 0;
+    //     contributingWheels = 0;
+
+    //     // Calculate weighted encoder distance
+    //     for (int i = 0; i < 3; i++) {
+    //         if (expectedSpeed[i] > 0) { // Avoid division by zero
+    //             totalWeightedDistance += newCount[i] / expectedSpeed[i];
+    //             contributingWheels++;
+    //         }
+    //     }
+
+    //     if (contributingWheels > 0) {
+    //         double avgDistance = (totalWeightedDistance / contributingWheels) * inchPerCount * 3;
+    //         if (avgDistance >= targetDistance) break;
+    //     }
+
+    //     speedPID(); // Adjust motor speeds
+    //     DebugLogSection(overview, detailed, debugName);
+    //     // Emergency stop condition
+    //     if (power[0] > 45 || power[1] > 45 || power[2] > 45) {
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
     FinalizeDebugging(overview, debugName);
     motorStop();
     Sleep(0.5);
