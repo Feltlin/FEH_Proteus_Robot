@@ -5,377 +5,18 @@
 #include <FEHServo.h>
 #include <FEHAccel.h>
 #include <FEHBattery.h>
-#include <FEHBuzzerNoSleep.h>
 #include <FEHRCS.h>
 #include <FEHSD.h>
+
+#include <FEHBuzzerNoSleep.h>
+// #include <text.h>
+
 #include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <algorithm>
 
-void exploration_3(){
-    FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
-    FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
-
-    DigitalEncoder LeftEncoder(FEHIO::P0_2);
-    DigitalEncoder RightEncoder(FEHIO::P0_1);
-
-    DigitalInputPin distanceSensor(FEHIO::P0_0);
-
-    //RCS.InitializeTouchMenu("1020C8WIE");
-
-    bool objectWithinRange = false;
-    LeftWheelMotor.SetPercent(-27);
-    RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange){
-        objectWithinRange = !distanceSensor.Value();
-        LCD.WriteLine("\u2207");
-        LCD.WriteLine(objectWithinRange);
-    }
-
-    RightWheelMotor.SetPercent(25);
-    LeftWheelMotor.SetPercent(25);
-    Sleep(0.5);
-    RightWheelMotor.Stop();
-    LeftWheelMotor.Stop();
-
-
-    //Turn left 90 degree.
-    RightEncoder.ResetCounts();
-    LeftEncoder.ResetCounts();
-    RightWheelMotor.SetPercent(25);
-    LeftWheelMotor.SetPercent(-25);
-    while((LeftEncoder.Counts() + RightEncoder.Counts()) / 2. < 224);
-    RightWheelMotor.Stop();
-    LeftWheelMotor.Stop();
-
-    objectWithinRange = false;
-    LeftWheelMotor.SetPercent(-27);
-    RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange){
-        objectWithinRange = !distanceSensor.Value();
-        LCD.WriteLine(objectWithinRange);
-    }
-
-    RightWheelMotor.SetPercent(25);
-    LeftWheelMotor.SetPercent(25);
-    Sleep(0.5);
-    RightWheelMotor.Stop();
-    LeftWheelMotor.Stop();
-
-    //Turn right 90 degree.
-    RightEncoder.ResetCounts();
-    LeftEncoder.ResetCounts();
-    RightWheelMotor.SetPercent(-25);
-    LeftWheelMotor.SetPercent(25);
-    while((LeftEncoder.Counts() + RightEncoder.Counts()) / 2. < 224);
-    RightWheelMotor.Stop();
-    LeftWheelMotor.Stop();
-
-    objectWithinRange = false;
-    LeftWheelMotor.SetPercent(-26);
-    RightWheelMotor.SetPercent(-25);
-    while (!objectWithinRange){
-        objectWithinRange = !distanceSensor.Value();
-        LCD.WriteLine(objectWithinRange);
-    }
-    RightWheelMotor.Stop();
-    LeftWheelMotor.Stop();
-}
-
-void colorSensor(){
-    //Being Updated for Milestone 2, Originally from Exploration 01
-    //This code uses no color filter for CdS Cell
-    FEHMotor LeftWheelMotor (FEHMotor::Motor0, 9.0);
-    FEHMotor RightWheelMotor (FEHMotor::Motor1, 9.0);
-    //declares an analog input pin on P0_3
-    AnalogInputPin CdS_cell(FEHIO::P0_3);
-    //FEHServo servo(FEHServo::Servo0);
-    //declares a digital input pin on P0_0
-    //DigitalInputPin front_left(FEHIO::P3_7);
-    //DigitalInputPin front_right(FEHIO::P0_0);
-    //DigitalInputPin back_left(FEHIO::P3_6);
-    //DigitalInputPin back_right(FEHIO::P0_1);
-
-    float cds = CdS_cell.Value();
-    //float angle = 0;
-    float x;
-    float y;
-    float colorVal;
-    //no light is 0, red is 1, blue is 2
-
-    //servo.SetMin(500);
-    //servo.SetMax(2419);
-    //servo.SetDegree(0);
-    Sleep(1.0);
-    if (cds < 0.33){
-        //Red Light
-        colorVal = 1;
-    }
-    else if (cds < 0.66){
-        //blue light
-        colorVal = 2;
-    }
-    else{
-        //no light
-        colorVal = 0;
-    }
-    //servo.SetDegree(50);
-    //Sleep(2.0);
-    //servo.SetDegree(180);
-    // while (!LCD.Touch(&x, &y))
-    // {
-    //     cds = CdS_cell.Value();
-    //     angle = (180.0/3.3) * cds;
-    //     servo.SetDegree(angle);
-    //     LCD.WriteLine(cds);
-    // }
-}
-
-void LineFollow(){
-    enum LineState{
-        middle = 0,
-        right = 1,
-        left = 2
-    };
-
-    FEHMotor LWMotor(FEHMotor::Motor0, 9.0);
-    FEHMotor RWMotor(FEHMotor::Motor1, 9.0);
-    AnalogInputPin ROSensor(FEHIO::P0_0);
-    AnalogInputPin MOSensor(FEHIO::P0_1);
-    AnalogInputPin LOSensor(FEHIO::P0_2);
-
-
-    int state = middle;
-    while(true){
-        switch(state){
-            case middle:
-                LWMotor.SetPercent(25);
-                RWMotor.SetPercent(25);
-                if(MOSensor.Value() < 2){
-                    if(LOSensor.Value() > 1.5){
-                        state = left;
-                    }
-                    else if(ROSensor.Value() > 2.4){
-                        state = right;
-                    }
-                }
-
-                break;
-
-            case right:
-                LWMotor.SetPercent(25);
-                RWMotor.SetPercent(5);
-                if(ROSensor.Value() < 2.4){
-                    if(MOSensor.Value() > 2){
-                        state = middle;
-                    }
-                }
-
-                break;
-
-            case left:
-                LWMotor.SetPercent(5);
-                RWMotor.SetPercent(25);
-                if(LOSensor.Value() < 1.5){
-                    if(MOSensor.Value() > 2){
-                        state = middle;
-                    }
-                }
-
-                break;
-        }
-    }
-}
-
-void OSensorValue(){
-    FEHMotor LWMotor(FEHMotor::Motor0, 9.0);
-    FEHMotor RWMotor(FEHMotor::Motor1, 9.0);
-    AnalogInputPin ROSensor(FEHIO::P0_0);
-    AnalogInputPin MOSensor(FEHIO::P0_1);
-    AnalogInputPin LOSensor(FEHIO::P0_2);
-    int state = 0;
-    int x, y;
-
-    while(true){
-        if(state == 0){
-            LCD.WriteLine(MOSensor.Value());
-            LCD.WriteLine("Middle");
-            Sleep(1.0);
-            if(LCD.Touch(&x, &y) == 1){
-                state = 1;
-            }
-        }
-        else if(state == 1){
-            LCD.WriteLine(LOSensor.Value());
-            LCD.WriteLine("Left");
-            Sleep(1.0);
-            if(LCD.Touch(&x, &y) == 1){
-                state = 2;
-            }
-        }
-        else if(state == 2){
-            LCD.WriteLine(ROSensor.Value());
-            LCD.WriteLine("Right");
-            Sleep(1.0);
-            if(LCD.Touch(&x, &y) == 1){
-                state = 0;
-            }
-        }
-    }
-}
-
-void ShaftEncoding(){
-    DigitalEncoder right_encoder(FEHIO::P0_0);
-    DigitalEncoder left_encoder(FEHIO::P0_1);
-    FEHMotor right_motor(FEHMotor::Motor0,9.0);
-    FEHMotor left_motor(FEHMotor::Motor1,9.0);
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-
-    //Move 14 in.
-    right_motor.SetPercent(25);
-    left_motor.SetPercent(25);
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < 567);
-    right_motor.Stop();
-    left_motor.Stop();
-
-    BuzzerNoSleep.Tone(BuzzerNoSleep.E4, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.E4, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.F4, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.G5, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.G5, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.F5, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.E5, 1.0);
-    BuzzerNoSleep.Tone(BuzzerNoSleep.D5, 1.0);
-
-    //Turn left 90 degree.
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-    right_motor.SetPercent(25);
-    left_motor.SetPercent(-25);
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < 224);
-    right_motor.Stop();
-    left_motor.Stop();
-
-    //Move 10 in.
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-    right_motor.SetPercent(25);
-    left_motor.SetPercent(25);
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < 405);
-    right_motor.Stop();
-    left_motor.Stop();
-
-    //Turn right 90 degree.
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-    right_motor.SetPercent(-25);
-    left_motor.SetPercent(25);
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < 224);
-    right_motor.Stop();
-    left_motor.Stop();
-
-    //Move 4 in.
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-    right_motor.SetPercent(25);
-    left_motor.SetPercent(25);
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < 162);
-    right_motor.Stop();
-    left_motor.Stop();
-
-
-}
-
-struct Note{
-    int duration, pitch;
-};
-
-enum{
-    C8  = 4186,
-    B7  = 3951, As7 = 3729, Bf7 = 3729, A7  = 3520, Gs7 = 3322, Af7 = 3322, G7  = 3136, Fs7 = 2960, Gf7 = 2960, F7  = 2794, E7  = 2637, Ds7 = 2489, Ef7 = 2489, D7  = 2349, Cs7 = 2217, Df7 = 2217, C7  = 2093,
-    B6  = 1976, As6 = 1865, Bf6 = 1865, A6  = 1760, Gs6 = 1661, Af6 = 1661, G6  = 1568, Fs6 = 1480, Gf6 = 1480, F6  = 1397, E6  = 1319, Ds6 = 1245, Ef6 = 1244, D6  = 1175, Cs6 = 1109, Df6 = 1109, C6  = 1047,
-    B5  = 988, As5 = 932, Bf5 = 932, A5  = 880, Gs5 = 831, Af5 = 831, G5  = 784, Fs5 = 740, Gf5 = 740, F5  = 698, E5  = 659, Ds5 = 622, Ef5 = 622, D5  = 587, Cs5 = 554, Df5 = 554, C5  = 523,
-    B4  = 494, As4 = 466, Bf4 = 466, A4  = 440, Gs4 = 415, Af4 = 415, G4  = 392, Fs4 = 370, Gf4 = 370, F4  = 349, E4  = 330, Ds4 = 311, Ef4 = 311, D4  = 294, Cs4 = 277, Df4 = 277, C4  = 261,
-    B3  = 247, As3 = 233, Bf3 = 233, A3  = 220, Gs3 = 208, Af3 = 208, G3  = 196, Fs3 = 185, Gf3 = 185, F3  = 175, E3  = 165, Ds3 = 156, Ef3 = 156, D3  = 147, Cs3 = 139, Df3 = 139, C3  = 131,
-    B2  = 123, As2 = 117, Bf2 = 117, A2  = 110, Gs2 = 104, Af2 = 104, G2  = 98, Fs2 = 92, Gf2 = 92, F2  = 87, E2  = 82, Ds2 = 78, Ef2 = 78, D2  = 73, Cs2 = 69, Df2 = 69, C2  = 65,
-    B1  = 62, As1 = 58, Bf1 = 58, A1  = 55, Gs1 = 52, Af1 = 52, G1  = 49, Fs1 = 46, Gf1 = 46, F1  = 44, E1  = 41, Ds1 = 39, Ef1 = 39, D1  = 37, Cs1 = 35, Df1 = 35, C1  = 33,
-    B0  = 31, As0 = 29, Bf0 = 29, A0  = 28
-};
-
-void asyncMusic(){
-    Note song[] = {
-        {500, E4}, {500, E4}, {500, F4}, {500, G4},
-        {500, G4}, {500, F4}, {500, E4}, {500, D4},
-        {500, C4}, {500, C4}, {500, D4}, {500, E4},
-        {750, E4}, {250, D4}, {1000, D4},
-        {500, E4}, {500, E4}, {500, F4}, {500, G4},
-        {500, G4}, {500, F4}, {500, E4}, {500, D4},
-        {500, C4}, {500, C4}, {500, D4}, {500, E4},
-        {750, D4}, {250, C4}, {1000, C4},
-    };
-    unsigned long t0 = TimeNowMSec(), t1 = t0, ta = 0;
-    int i = 0;
-    bool playing = false;
-    while(true){
-        t1 = TimeNowMSec() - t0;
-        if(t1 < ta + song[i].duration){
-            if(playing == false){
-                BuzzerNoSleep.Tone(song[i].pitch, int(song[i].duration * 0.8));
-                playing = true;
-            }
-        }
-        else{
-            ta += song[i].duration;
-            ++i;
-            playing = false;
-        }
-        LCD.WriteLine(int(t1));
-    }
-}
-
-void milestone_1(){
-    DigitalEncoder encoder[3] = {
-        DigitalEncoder(FEHIO::P0_0),
-        DigitalEncoder(FEHIO::P0_1),
-        DigitalEncoder(FEHIO::P0_2),
-    };
-    FEHMotor motor[3] = {
-        FEHMotor(FEHMotor::Motor0, 9.0),
-        FEHMotor(FEHMotor::Motor1, 9.0),
-        FEHMotor(FEHMotor::Motor2, 9.0),
-    };
-    for(int i = 0; i < 3; ++i){
-        encoder[i].ResetCounts();
-    }
-    motor[1].SetPercent(-22.5);
-    motor[2].SetPercent(20);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 26){}
-    motor[1].Stop();
-    motor[2].Stop();
-
-    float x, y;
-    while(!LCD.Touch(&x, &y)){}
-    for(int i = 0; i < 3; ++i){
-        encoder[i].ResetCounts();
-    }
-    motor[1].SetPercent(-41.7);
-    motor[2].SetPercent(40);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 28){}
-    motor[1].Stop();
-    motor[2].Stop();
-
-    Sleep(1.);
-    for(int i = 0; i < 3; ++i){
-        encoder[i].ResetCounts();
-    }
-    motor[1].SetPercent(40);
-    motor[2].SetPercent(-41);
-    while((encoder[1].Counts() + encoder[2].Counts()) / 2 * 2.5 * M_PI / 318 < 23){}
-    motor[1].Stop();
-    motor[2].Stop();
-}
+//FEHFile *fptr = SD.FOpen("Test.txt", "w");
 
 void fiveRevolution(){
     FEHMotor frontMotor = FEHMotor(FEHMotor::Motor0, 9.0);
@@ -389,211 +30,865 @@ void fiveRevolution(){
     frontMotor.Stop();
 }
 
-class State{
-    public:
-        DigitalEncoder encoder[3] = {
-            DigitalEncoder(FEHIO::P0_0),
-            DigitalEncoder(FEHIO::P0_1),
-            DigitalEncoder(FEHIO::P0_2),
-        };
-        FEHMotor motor[3] = {
-            FEHMotor(FEHMotor::Motor0, 9.0),
-            FEHMotor(FEHMotor::Motor1, 9.0),
-            FEHMotor(FEHMotor::Motor2, 9.0),
-        };
-        AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
-        double inchPerCount = 2.5 * M_PI / 318;
+// class _State{
+//     public:
+//         DigitalEncoder encoder[3] = {
+//             DigitalEncoder(FEHIO::P0_0),
+//             DigitalEncoder(FEHIO::P0_1),
+//             DigitalEncoder(FEHIO::P0_2),
+//         };
+//         FEHMotor motor[3] = {
+//             FEHMotor(FEHMotor::Motor0, 9.0),
+//             FEHMotor(FEHMotor::Motor1, 9.0),
+//             FEHMotor(FEHMotor::Motor2, 9.0),
+//         };
+//         AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_3);
+//         double inchPerCount = 2.5 * M_PI / 318;
 
-        //{Front, Left, Right}
-        double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
-        double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
-        double PConst[3] = {0.1, 0.1, 0.1}, IConst[3] = {0, 0, 0}, DConst[3] = {0, 0, 0};
+//         //{Front, Left, Right}
+//         double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
+//         double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
+//         double PConst[3] = {0.3, 0.3, 0.3}, IConst[3] = {0, 0, 0}, DConst[3] = {0, 0, 0};
 
-        double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
-        double power[3] = {0, 0, 0};
-        double distance[3] = {0, 0, 0};
-        int direction[3] = {1, 1, 1};
+//         double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
+//         double power[3] = {0, 0, 0};
+//         int direction[3] = {0, 0, 0};
 
-        int newCount[3] = {0, 0, 0}, oldCount[3] = {0, 0, 0};
+//         int newCount[3] = {0, 0, 0}, oldCount[3] = {0, 0, 0};
 
-        unsigned long newTime[3] = {0, 0, 0}, lastTime[3] = {0, 0, 0};
+//         unsigned long newTime[3] = {0, 0, 0}, oldTime[3] = {0, 0, 0};
 
-        std::string state = "start";
-        bool init = true;
+//         std::string state = "startMenu";
+//         bool init = true;
+//         bool switchingState = false;
+//         int sweepState = 0;
+//         int sweepCount = 0;
+//         float minCDS = 3;
+//         std::string lightColor = "nothing";
+        
+//         Text text;
 
-    State(){
-        for(int i = 0; i < 3; ++i){
-            encoder[i].ResetCounts();
-        }
-    }
+//     _State(){
+//         for(int i = 0; i < 3; ++i){
+//             encoder[i].ResetCounts();
+//         }
+//     }
 
-    void PID(){
-        for(int i = 0; i < 3; ++i){
-            updateTime(i);
-            oldCount[i] = newCount[i];
-            newCount[i] = encoder[i].Counts();
-            actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - lastTime) * 1000;
-            oldError[i] = newError[i];
-            newError[i] = expectedSpeed[i] - actualSpeed[i];
-            errorDel[i] = (newError[i] - oldError[i]) / (newTime - lastTime) * 1000;
-            errorSum[i] += newError[i];
-            PTerm[i] = newError[i] * PConst[i];
-            ITerm[i] = errorSum[i] * IConst[i];
-            DTerm[i] = errorDel[i] * DConst[i];
-            power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
-            motor[i].SetPercent(power[i] * direction[i]);
-        }
-    }
+//     void PID(){
+//         Sleep(0.01);
+//         for(int i = 0; i < 3; ++i){
+//             updateTime(i);
+//             oldCount[i] = newCount[i];
+//             newCount[i] = encoder[i].Counts();
+//             actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime[i] - oldTime[i]) * 1000;
+//             oldError[i] = newError[i];
+//             newError[i] = expectedSpeed[i] - actualSpeed[i];
+//             errorDel[i] = (newError[i] - oldError[i]) / (newTime[i] - oldTime[i]) * 1000;
+//             errorSum[i] += newError[i];
+//             PTerm[i] = newError[i] * PConst[i];
+//             ITerm[i] = errorSum[i] * IConst[i];
+//             DTerm[i] = errorDel[i] * DConst[i];
+//             power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+//             motor[i].SetPercent(power[i] * direction[i]);
+//         }
+//     }
 
-    void zero(){
-        for(int i = 0; i < 3; ++i){
-            motor[i].SetPercent(0);
-            encoder[i].ResetCounts();
-            newError[i] = 0;
-            oldError[i] = 0;
-            errorSum[i] = 0;
-            errorDel[i] = 0;
-            PTerm[i] = 0;
-            ITerm[i] = 0;
-            DTerm[i] = 0;
+//     // Rotational PID but ensure 3 wheel have the same encoder count with a min power.
+//     void RPID(){
+//         for(int i = 0; i < 3; ++i){
+//             oldCount[i] = newCount[i];
+//             newCount[i] = encoder[i].Counts();
+//             motor[i].SetPercent(power[i] * direction[i]);
+//         }
+//     }
 
-            actualSpeed[i] = 0;
-            expectedSpeed[i] = 0;
-            power[i] = 0;
-            distance[i] = 0;
-            direction[i] = 0;
+//     //Rotational PID but front wheel regular PID, left and right use encoder count as error.
+//     void RPID2(){
+//         for(int i = 0; i < 3; ++i){
+//             updateTime(i);
+//             oldCount[i] = newCount[i];
+//             newCount[i] = encoder[i].Counts();
+//             oldError[i] = newError[i];
+//             if(i == 0){
+//                 actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime[i] - oldTime[i]) * 1000;
+//                 newError[i] = expectedSpeed[i] - actualSpeed[i];
+//             }
+//             // actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime - oldTime) * 1000;
+//             else{
+//                 newError[i] = newCount[0] - newCount[i];
+//             }
+//             // newError[i] = expectedSpeed[i] - actualSpeed[i];
+//             errorDel[i] = (newError[i] - oldError[i]) / (newTime[i] - oldTime[i]) * 1000;
+//             errorSum[i] += newError[i];
+//             PTerm[i] = newError[i] * PConst[i];
+//             ITerm[i] = errorSum[i] * IConst[i];
+//             DTerm[i] = errorDel[i] * DConst[i];
+//             // power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+//             power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], power[0] / 2), 50.);
+//             motor[i].SetPercent(power[i] * direction[i]);
+            
+//         }
+//     }
 
-            newCount[i] = 0;
-            oldCount[i] = 0;
+//     void zero(){
 
-            newTime[i] = 0;
-            lastTime[i] = 0;
-        }
-    }
+//         // SD.FPrintf(fptr, "%s\n", state);
+//         // SD.FPrintf(fptr, "Real values:\n");
+//         // SD.FPrintf(fptr, "%i\n", encoder[0].Counts());
+//         // SD.FPrintf(fptr, "%i\n", encoder[1].Counts());
+//         // SD.FPrintf(fptr, "%i\n", encoder[2].Counts());
+//         // SD.FPrintf(fptr, "NewCount values:\n");
+//         // SD.FPrintf(fptr, "%i\n", newCount[0]);
+//         // SD.FPrintf(fptr, "%i\n", newCount[0]);
+//         // SD.FPrintf(fptr, "%i\n", newCount[0]);
 
-    void updateTime(int i){
-        lastTime[i] = newTime[i];
-        newTime[i] = TimeNowMSec();
-        LCD.Write("lastTime: ");
-        LCD.WriteLine(int(lastTime[i]));
-        LCD.Write("newTime: ");
-        LCD.WriteLine(int(newTime[i]));
-    }
+//         for(int i = 0; i < 3; ++i){
+//             motor[i].SetPercent(0);
+//             motor[i].Stop();
+//             encoder[i].ResetCounts();
+//             newError[i] = 0;
+//             oldError[i] = 0;
+//             errorSum[i] = 0;
+//             errorDel[i] = 0;
+//             PTerm[i] = 0;
+//             ITerm[i] = 0;
+//             DTerm[i] = 0;
 
-    void updateState(){
-        if(state == "start"){
-            start(); 
-        }
-        else if(state == "rotate"){
-            rotate();
-        }
-        else if(state == "moveToButton"){
-            moveToButton();
-        }
-    }
+//             actualSpeed[i] = 0;
+//             expectedSpeed[i] = 0;
+//             power[i] = 0;
+//             direction[i] = 0;
 
-    void start(){
-        if(init){
-            init = false;
-            zero();
-            expectedSpeed[0] = 0;
-            expectedSpeed[1] = 2;
-            expectedSpeed[2] = 2;
-            direction[1] = -1;
-            direction[2] = 1;
-            power[1] = 20;
-            power[2] = 20;
-            motor[1].SetPercent(power[1] * direction[1]);
-            motor[2].SetPercent(power[2] * direction[2]);
+//             newCount[i] = 0;
+//             oldCount[i] = 0;
 
-        }
-        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 30){
-            PID();
-        }
-        else{
-            for(int i = 0; i < 3; ++i){
-                motor[i].Stop();
-            }
-            state = "rotate";
-            init = true;
-        }
-    }
+//             newTime[i] = 0;
+//             oldTime[i] = 0;
+//         }
+//     }
 
-    void rotate(){
-        if(init){
-            init = false;
-            zero();
-            for(int i = 0; i < 3; ++i){
-                expectedSpeed[i] = 1;
-                direction[i] = 1;
-                power[i] = 20;
-                motor[i].SetPercent(power[i] * direction[i]);
-            }
-        }
-        else if ((newCount[0] + newCount[1] + newCount[2]) / 3 * inchPerCount < 4. * M_PI / 2){
-            PID();
-        }
-        else{
-            for(int i = 0; i < 3; ++i){
-                motor[i].Stop();
-            }
-            state = "moveToButton";
-            init = true;
-        }
-    }
+//     void updateTime(int i){
+//         oldTime[i] = newTime[i];
+//         newTime[i] = TimeNowMSec();
+//         //LCD.Write("oldTime: ");
+//         //LCD.WriteLine(int(oldTime[i]));
+//         //LCD.Write("newTime: ");
+//         //LCD.WriteLine(int(newTime[i]));
+//     }
 
-    void moveToButton(){
-        if(init){
-            init = false;
-            zero();
-            expectedSpeed[1] = 2;
-            expectedSpeed[2] = 2;
-            direction[1] = -1;
-            direction[2] = 1;
-            power[1] = 20;
-            power[2] = 20;
-            motor[1].SetPercent(power[1] * direction[1]);
-            motor[2].SetPercent(power[2] * direction[2]);
-        }
-        else if ((newCount[1] + newCount[2]) / 2 * inchPerCount < 15){
-            PID();
-        }
-        else{
-            for(int i = 0; i < 3; ++i){
-                motor[i].Stop();
-            }
-        }
-    }
-    void CdS(){
-        Sleep(1.0);
-        float light = CdS.Value();
+//     void updateState(){
+//         if(state == "startMenu"){
+//             startMenu();
+//         }
+//         else if(state == "start"){
+//             start(); 
+//         }
+//         else if(state == "rotate"){
+//             rotate();
+//         }
+//         else if(state == "moveToButton"){
+//             moveToButton();
+//         }
+//         else if(state == "sweepForLight"){
+//             sweepForLight();
+//         }
+//         else if(state == "touchButton"){
+//             touchButton();
+//         }
+//         else if(state == "moveAwayFromButton"){
+//             moveAwayFromButton();
+//         }
+//         else if(state == "rotateBack"){
+//             rotateBack();
+//         }
+//         else if(state == "moveDownSlope"){
+//             moveDownSlope();
+//         }
+//         else if(state == "final"){
+//             final();
+//         }
+//     }
 
-        std::string colorVal;
+//     void startMenu(){
+//         if(init){
+//             LCD.Clear();
+//             init = false;
+//             zero();
+//         }
+//         else if(text.button("Touch me", 0xffffff, 136, 100)){
+//             text.display("YOU WILL GET TOUCHED.", 0xff0000, 100, 58);
+//             Sleep(3.0);
+//             state = "start";
+//             init = true;
+//             zero();
+//         }
+//         else if(text.button("Rotate", 0xffffff, 136, 120)){
+//             Sleep(3.0);
+//             state = "rotate";
+//             init = true;
+//             zero();
+//         }
+//         else if(text.button("Touch Button", 0xffffff, 136, 140)){
+//             state = "touchButton";
+//             init = true;
+//             zero();
+//         }
+//     }
 
-        if (light < 0.33){
-            //Red Light
-            colorVal = "Red";
-        }
-        else if (light < 0.66){
-            //blue light
-            colorVal = "Blue";
-        }
-        else{
-            //no light
-            colorVal = "None";
-        }
+//     void start(){
+//         if(init){
+//             init = false;
+//             expectedSpeed[1] = 6;
+//             expectedSpeed[2] = 6;
+//             direction[1] = -1;
+//             direction[2] = 1;
+//             power[1] = 20;
+//             power[2] = 20;
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             motor[2].SetPercent(power[2] * direction[2]);
 
-    }
+//         }
+//         else if((newCount[1] + newCount[2]) / 2 * inchPerCount < 35){
+//             PID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "rotate";
+//             init = true;
+//             zero();
+//         }
+//     }
 
+//     float CDS()
+//     {
+//         return CdS.Value();
+//     }
 
+//     void rotate(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             for(int i = 0; i < 3; ++i){
+//                 expectedSpeed[i] = 4;
+//                 direction[i] = 1;
+//                 power[i] = 15;
+//                 motor[i].SetPercent(power[i] * direction[i]);
+//             }
+//         }
+//         else if((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 2.65 * M_PI / 2){
+//             RPID();
+//         }
+//         else{
+//             motor[0].Stop();
+//             motor[1].Stop();
+//             motor[2].Stop();
+//             state = "moveToButton";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void moveToButton(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             expectedSpeed[1] = 6;
+//             expectedSpeed[2] = 6;
+//             direction[1] = -1;
+//             direction[2] = 1;
+//             power[1] = 20;
+//             power[2] = 20;
+//             motor[0].Stop();
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             motor[2].SetPercent(power[2] * direction[2]);
+//         }
+//         else if((newCount[1] + newCount[2]) / 2 * inchPerCount < 11){
+//             PID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "sweepForLight";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void sweepForLight(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             expectedSpeed[1] = 6;
+//             direction[1] = -1;
+//             power[1] = 10;
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             sweepState = 1;
+//         }
+//         else if(sweepCount <= 7){
+//             if(newCount[1] * inchPerCount < 0.5 && sweepState == 1){
+//                 minCDS = std::min(minCDS, CDS());
+//                 PID();
+//             }
+//             else if(sweepState == 1){
+//                 motor[1].Stop();
+//                 zero();
+//                 sweepState = 2;
+//                 ++sweepCount;
+//                 expectedSpeed[2] = 6;
+//                 direction[2] = 1;
+//                 power[2] = 10;
+//                 motor[2].SetPercent(power[2] * direction[2]);
+//             }
+//             if(newCount[2] * inchPerCount < 0.5 && sweepState == 2){
+//                 minCDS = std::min(minCDS, CDS());
+//                 PID();
+//             }
+//             else if(sweepState == 2){
+//                 motor[2].Stop();
+//                 zero();
+//                 sweepState = 1;
+//                 ++sweepCount;
+//                 expectedSpeed[1] = 6;
+//                 direction[1] = -1;
+//                 power[1] = 10;
+//                 motor[1].SetPercent(power[1] * direction[1]);
+//             }
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "touchButton";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void touchButton(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             // expectedSpeed[1] = 2;
+//             // expectedSpeed[2] = 2;
+//             // direction[1] = -1;
+//             // direction[2] = 1;
+//             // power[1] = 20;
+//             // power[2] = 20;
+//             // motor[1].SetPercent(power[1] * direction[1]);
+//             // motor[2].SetPercent(power[2] * direction[2]);
+//             LCD.Clear();
+//             text.display(std::to_string(CDS()), 0xffffff, 100, 160);
+//             if(minCDS < 0.48){
+//                 lightColor = "red";
+//                 text.display("I SAW DAMN RED", 0xffffff, 100, 80);
+//             }
+//             else if(minCDS < 0.9){
+//                 lightColor = "blue";
+//                 text.display("I SAW DAMN BLUE", 0xffffff, 100, 80);
+//             }
+//             else{
+//                 text.display("DIDN'T SEE THE DAMN LIGHT", 0xffffff, 100, 80);
+//                 text.display("MINIMUM VALUE WAS", 0xffffff, 100, 100);
+//                 text.display(std::to_string(minCDS), 0xffffff, 100, 120);
+//             }
+//             direction[1] = -1;
+//             direction[2] = 1;
+//             motor[0].Stop();
+//             if(lightColor == "blue"){
+//                 expectedSpeed[1] = 4;
+//                 expectedSpeed[2] = 5;
+//                 power[1] = 5;
+//                 power[2] = 20;
+//             }
+//             else{
+//                 expectedSpeed[1] = 5;
+//                 expectedSpeed[2] = 4;
+//                 power[1] = 20;
+//                 power[2] = 5;
+//             }
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             motor[2].SetPercent(power[2] * direction[2]);
+//         }
+//         else if((newCount[1] + newCount[2]) * inchPerCount < 12){
+//             PID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "moveAwayFromButton";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void moveAwayFromButton(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             expectedSpeed[1] = 6;
+//             expectedSpeed[2] = 6;
+//             direction[1] = 1;
+//             direction[2] = -1;
+//             power[1] = 20;
+//             power[2] = 20;
+//             motor[0].Stop();
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             motor[2].SetPercent(power[2] * direction[2]);
+//         }
+//         else if((newCount[1] + newCount[2]) / 2 * inchPerCount < 17){
+//             PID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "rotateBack";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void rotateBack(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             for(int i = 0; i < 3; ++i){
+//                 expectedSpeed[i] = 5;
+//                 direction[i] = 1;
+//                 power[i] = 15;
+//                 motor[i].SetPercent(power[i] * direction[i]);
+//             }
+//         }
+//         else if((encoder[0].Counts() + encoder[1].Counts() + encoder[2].Counts()) / 3 * inchPerCount < 2.65 * M_PI / 2){
+//             RPID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "moveDownSlope";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void moveDownSlope(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             expectedSpeed[1] = 6;
+//             expectedSpeed[2] = 6;
+//             direction[1] = -1;
+//             direction[2] = 1;
+//             power[1] = 20;
+//             power[2] = 20;
+//             motor[1].SetPercent(power[1] * direction[1]);
+//             motor[2].SetPercent(power[2] * direction[2]);
+
+//         }
+//         else if((newCount[1] + newCount[2]) / 2 * inchPerCount < 35){
+//             PID();
+//         }
+//         else{
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//             state = "final";
+//             init = true;
+//             zero();
+//         }
+//     }
+
+//     void final(){
+//         if(init){
+//             Sleep(1.);
+//             init = false;
+//             for(int i = 0; i < 3; ++i){
+//                 motor[i].Stop();
+//             }
+//         }
+//         else{
+//             if(lightColor == "blue"){
+//                 LCD.SetBackgroundColor(BLUE);
+//             }
+//             else{
+//                 LCD.SetBackgroundColor(RED);
+//             }
+//             LCD.Clear();
+//         }
+//     }
+
+// };
+
+DigitalEncoder encoder[3] = {
+    DigitalEncoder(FEHIO::P0_1),
+    DigitalEncoder(FEHIO::P0_2),
+    DigitalEncoder(FEHIO::P0_3),
 };
+FEHMotor motor[3] = {
+    FEHMotor(FEHMotor::Motor0, 9.0),
+    FEHMotor(FEHMotor::Motor1, 9.0),
+    FEHMotor(FEHMotor::Motor2, 9.0),
+};
+FEHServo armServo(FEHServo::Servo0);
+FEHServo prongServo(FEHServo::Servo1);
+AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_0);
 
-State state;
+
+double inchPerCount = 2.5 * M_PI / 318;
+
+//{Front, Left, Right}
+double newError[3] = {0, 0, 0}, oldError[3] = {0, 0, 0}, errorSum[3] = {0, 0, 0}, errorDel[3] = {0, 0, 0};
+double PTerm[3] = {0, 0, 0}, ITerm[3] = {0, 0, 0}, DTerm[3] = {0, 0, 0};
+double PConst[3] = {0.4, 0.4, 0.4}, IConst[3] = {0.02, 0.02, 0.02}, DConst[3] = {0.01, 0.01, 0.01};
+
+double actualSpeed[3] = {0, 0, 0}, expectedSpeed[3] = {0, 0, 0};
+double power[3] = {0, 0, 0};
+int direction[3] = {0, 0, 0};
+double vx = 0, vy = 0;
+
+int newCount[3] = {0, 0, 0}, oldCount[3] = {0, 0, 0};
+
+unsigned long newTime[3] = {0, 0, 0}, oldTime[3] = {0, 0, 0};
+
+bool switchingState = false;
+int sweepState = 0;
+int sweepCount = 0;
+float minCDS = 3;
+std::string lightColor = "nothing";
+
+// Text text;
+
+float CDS()
+{
+    return CdS.Value();
+}
+
+void zero(){
+    for(int i = 0; i < 3; ++i){
+        motor[i].Stop();
+        encoder[i].ResetCounts();
+        newError[i] = 0;
+        oldError[i] = 0;
+        errorSum[i] = 0;
+        errorDel[i] = 0;
+        PTerm[i] = 0;
+        ITerm[i] = 0;
+        DTerm[i] = 0;
+
+        actualSpeed[i] = 0;
+        expectedSpeed[i] = 0;
+        power[i] = 0;
+        direction[i] = 0;
+
+        newCount[i] = 0;
+        oldCount[i] = 0;
+    }
+}
+
+void speedPID(){
+    Sleep(15);
+    for(int i = 0; i < 3; ++i){
+        oldTime[i] = newTime[i];
+        newTime[i] = TimeNowMSec();
+        oldCount[i] = newCount[i];
+        newCount[i] = encoder[i].Counts();
+        actualSpeed[i] = inchPerCount * (newCount[i] - oldCount[i]) / (newTime[i] - oldTime[i]) * 1000;
+        oldError[i] = newError[i];
+        newError[i] = expectedSpeed[i] - actualSpeed[i];
+        errorDel[i] = (newError[i] - oldError[i]) / (newTime[i] - oldTime[i]) * 1000;
+        errorSum[i] += newError[i];
+        PTerm[i] = newError[i] * PConst[i];
+        ITerm[i] = errorSum[i] * IConst[i];
+        DTerm[i] = errorDel[i] * DConst[i];
+        power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+        motor[i].SetPercent(power[i] * direction[i]);
+    }
+}
+
+void vectorDirection(double x, double y){
+    double vx = x;
+    double vy = y;
+    expectedSpeed[0] = fabs(vx);
+    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3));
+    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3));
+    direction[0] = vx >= 0 ? -1 : 1;
+    direction[1] = (vx * cos(M_PI / 3) - vy * sin(M_PI / 3) >= 0) ? 1 : -1;
+    direction[2] = (vx * cos(M_PI / 3) + vy * sin(M_PI / 3) >= 0) ? 1 : -1;
+    // for(int i = 0; i < 3; ++i){
+    //     power[i] = expectedSpeed[i] * 4.5 * direction[i];
+    //     motor[i].SetPercent(expectedSpeed[i] * 4.5 * direction[i]);
+    // }
+    // For some reason, trying to initialize the power makes the whole thing super inconsistent, safer to let it ramp up to speed
+}
+
+
+
+void motorStop(){
+    for(int i = 0; i < 3; ++i){
+        motor[i].Stop();
+    }
+}
+
+std::string currentDebugSection = "";
+void DebugLogSection(FEHFile *overview, FEHFile *detailed, std::string sectionName)
+{
+    if (currentDebugSection != sectionName)
+    {
+        SD.FPrintf(overview, "START Section:\n%s\nCurrent Time: %f\n\n", sectionName.c_str(), TimeNow());
+        SD.FPrintf(detailed, "START Section:\n%s\nCurrent Time: %f\n\n", sectionName.c_str(), TimeNow());
+        currentDebugSection = sectionName;
+    }
+    SD.FPrintf(detailed, "Front: Expected - %f, Actual - %f\n", expectedSpeed[0], actualSpeed[0]);
+    SD.FPrintf(detailed, "Left: Expected - %f, Actual - %f\n", expectedSpeed[1], actualSpeed[1]);
+    SD.FPrintf(detailed, "Right: Expected - %f, Actual - %f\n\n", expectedSpeed[2], actualSpeed[2]);
+}
+
+void FinalizeDebugging(FEHFile *overview, std::string sectionName)
+{
+    SD.FPrintf(overview, "Section stats:\n\n");
+    SD.FPrintf(overview, "Front Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[0] * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[0]);
+
+    SD.FPrintf(overview, "Left Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[1] * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[1]);
+
+    
+    SD.FPrintf(overview, "Right Wheel:\n");
+    SD.FPrintf(overview, "Distance Travelled: %f\n", (double)newCount[2] * inchPerCount);
+    SD.FPrintf(overview, "Final Speed: %f\n\n", actualSpeed[2]);
+
+    SD.FPrintf(overview, "END Section:\n%s\nCurrent Time: %f\n\n\n", sectionName.c_str(), TimeNow());
+}
+
+void moveVectorDistance(double x, double y, double targetDistance, const std::string& debugName, FEHFile *overview, FEHFile *detailed) {
+    zero();
+    vectorDirection(x, y);
+
+    double projx = 0;
+    double projy = 0;
+
+    while(projx * projx + projy * projy < targetDistance * targetDistance){
+        speedPID();
+        // projx = inchPerCount * (newCount[0] + newCount[1] * cos(M_PI / 3) + newCount[2] * cos(M_PI / 3));
+        // projy = inchPerCount * (newCount[1] * sin(M_PI / 3) + newCount[2] * sin(M_PI / 3));
+        projx += inchPerCount * (-2 * (newCount[0] - oldCount[0]) + (1 - 2 / sqrt(3)) * (newCount[1] - oldCount[1]) + (1 + 2 / sqrt(3)) * (newCount[2] - oldCount[2]));
+        projy += inchPerCount * (1 / sqrt(3) * (newCount[1] - oldCount[1]) - 1 / sqrt(3) * (newCount[2] - oldCount[2]));
+        DebugLogSection(overview, detailed, debugName);
+        
+        minCDS = std::min(minCDS, CdS.Value());
+
+
+
+        if (power[0] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Front wheel: Power over 45");
+            break;
+        }
+        if (power[1] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Left wheel: Power over 45");
+            break;
+        }
+        if (power[2] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Right Wheel: Power over 45");
+            break;
+        }
+    }
+
+    // while (true) {
+    //     totalWeightedDistance = 0;
+    //     contributingWheels = 0;
+
+    //     // Calculate weighted encoder distance
+    //     for (int i = 0; i < 3; i++) {
+    //         if (expectedSpeed[i] > 0) { // Avoid division by zero
+    //             totalWeightedDistance += newCount[i] / expectedSpeed[i];
+    //             contributingWheels++;
+    //         }
+    //     }
+
+    //     if (contributingWheels > 0) {
+    //         double avgDistance = (totalWeightedDistance / contributingWheels) * inchPerCount * 3;
+    //         if (avgDistance >= targetDistance) break;
+    //     }
+
+    //     speedPID(); // Adjust motor speeds
+    //     DebugLogSection(overview, detailed, debugName);
+    //     // Emergency stop condition
+    //     if (power[0] > 45 || power[1] > 45 || power[2] > 45) {
+    //         LCD.SetBackgroundColor(RED);
+    //         LCD.Clear();
+    //         break;
+    //     }
+    // }
+    FinalizeDebugging(overview, debugName);
+    motorStop();
+    Sleep(0.5);
+}
+
+void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
+    zero();  // Reset encoders
+
+    double robotRadius = 3.9375; // Adjust based on your robot's actual radius (in inches)
+    double arcLength = (2 * M_PI * robotRadius * fabs(degrees)) / 360.0;
+
+    // Set wheel directions for rotation (all wheels move the same way)
+    expectedSpeed[0] = 5;
+    expectedSpeed[1] = 5;
+    expectedSpeed[2] = 5;
+    
+    int rotationDirection = (degrees > 0) ? -1 : 1; // Counterclockwise (-1) for positive, clockwise (+1) for negative
+    direction[0] = rotationDirection;
+    direction[1] = rotationDirection;
+    direction[2] = rotationDirection;
+
+    double totalDistance = 0;
+    std::string debugName = std::to_string((int)degrees) + " degree rotation";
+
+    while (true) {
+        // Calculate total encoder distance traveled
+        totalDistance = (newCount[0] + newCount[1] + newCount[2]) / 3.0 * inchPerCount;
+
+        if (totalDistance >= arcLength) break;
+
+        speedPID(); // Adjust motor speeds
+        DebugLogSection(overview, detailed, debugName);
+
+        // Emergency stop condition
+        if (power[0] > 45 || power[1] > 45 || power[2] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            break;
+        }
+    }
+
+    FinalizeDebugging(overview, debugName);
+    motorStop();
+    Sleep(0.5);
+}
+
+void servoSetDegree(int angle0, int angle1){
+    if(angle0 < angle1){
+        for (int i = angle0; i <= angle1; i++){
+            prongServo.SetDegree(i);
+        }
+    }
+    else{
+        for (int i = angle0; i >= angle1; i--){
+            prongServo.SetDegree(i);
+        }
+    }
+    
+    Sleep(1.);
+}
+
+
 
 int main(){
-    while(true){
-        state.updateState();
+    FEHFile *detailedFptr = SD.FOpen("Detailed.txt","w");
+    FEHFile *overviewFptr = SD.FOpen("Overview.txt","w");
+    
+    armServo.SetMin(500);
+    armServo.SetMax(2500);
+    prongServo.SetMin(820);
+    prongServo.SetMax(2205);
+
+    SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.)/1.5*100.);
+
+    zero();
+    LCD.Clear();
+    // Wait for light
+    prongServo.SetDegree(0);
+    while (CDS() > 0.9){}
+
+    // Start
+    moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 2.5, std::string("Move Forward"), overviewFptr, detailedFptr);
+
+    // Compost bin
+    rotateDegrees(-135, overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -3, 0.75, std::string("Back up slightly"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(150, 1);
+    moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(150, 1);
+    moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+
+    // Apple bucket
+    moveVectorDistance(0, -6, 23, std::string("Back up"), overviewFptr, detailedFptr);
+    rotateDegrees(180, overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 8, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
+
+    // Window
+    SD.FPrintf(overviewFptr, "\nSTART MAJOR Window section\n\n\n");
+    moveVectorDistance(0, 6, 3, std::string("Normalize into right wall"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 8, std::string("Move closer to window"), overviewFptr, detailedFptr);
+    rotateDegrees(-90, overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 8, std::string("Back into window"), overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 7, std::string("Open window"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 1, std::string("Inch forward out of window"), overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 1, std::string("Inch left of window"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 1, std::string("Inch back to window"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 7, std::string("Close window"), overviewFptr, detailedFptr);
+
+    // Red/Blue button
+    SD.FPrintf(overviewFptr, "\nSTART MAJOR Red/Blue button section\n\n\n");
+    moveVectorDistance(0, 6, 5, std::string("Inch forward out of window, align with black stripe"), overviewFptr, detailedFptr);
+    rotateDegrees(-90, overviewFptr, detailedFptr);
+    minCDS = 3.0;
+    moveVectorDistance(0, 3, 5, std::string("Inch forward to find light"), overviewFptr, detailedFptr);
+    if (minCDS < 0.48)
+    {
+        //Red light seen
+        SD.FPrintf(overviewFptr, "\nRed light seen!\n\n");
+
+        moveVectorDistance(3, 0, 2, std::string("Shift right for red button"), overviewFptr, detailedFptr);
+    }
+    else
+    {
+        //Go for blue
+        if (minCDS < 0.9)
+        {
+            SD.FPrintf(overviewFptr, "\nBlue light seen!\n\n");
+        }
+        else
+        {
+            SD.FPrintf(overviewFptr, "\nNo light seen!\n\n");
+        }
+        
+        moveVectorDistance(-3, 0, 2, std::string("Shift left for blue button"), overviewFptr, detailedFptr);
+    }
+    moveVectorDistance(0, 6, 7, std::string("Go to touch button"), overviewFptr, detailedFptr);
+
+
+    // Lever flip
+    int lever = RCS.GetLever();
+    // keep going...
+
+    for(int i = 0; i < 3; ++i){
+        motor[i].Stop();
     }
 
-	return 0;
+    SD.FClose(overviewFptr);
+    SD.FClose(detailedFptr);
+    return 0;
 }
