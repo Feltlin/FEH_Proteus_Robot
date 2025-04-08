@@ -144,7 +144,7 @@ void DebugLogSection(FEHFile *overview, FEHFile *detailed, std::string sectionNa
 void FinalizeDebugging(FEHFile *overview, std::string sectionName)
 {
     SD.FPrintf(overview, "\tFront: %f | Left: %f | Right: %f\n", (double)newCount[0] * inchPerCount, (double)newCount[1] * inchPerCount, (double)newCount[2] * inchPerCount);
-    SD.FPrintf(overview, "Final x: %f | Final y: %f | Final angle: %f \n\n", relax, relay, relangle * M_PI / 180);
+    SD.FPrintf(overview, "Final x: %f | Final y: %f | Final angle: %f \n\n", relax, relay, relangle * 180 / M_PI);
     SD.FPrintf(overview, "\tEnd Time: %f\n\n", sectionName.c_str(), TimeNow());
 }
 
@@ -169,21 +169,21 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
             LCD.WriteLine("Front wheel: Power over 45");
-            SD.FPrintf(overview, "Front wheel power over 45");
+            SD.FPrintf(overview, "Front wheel power over 45\n");
             break;
         }
         if (power[1] > 45) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
             LCD.WriteLine("Left wheel: Power over 45");
-            SD.FPrintf(overview, "Left wheel power over 45");
+            SD.FPrintf(overview, "Left wheel power over 45\n");
             break;
         }
         if (power[2] > 45) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
             LCD.WriteLine("Right Wheel: Power over 45");
-            SD.FPrintf(overview, "Right wheel power over 45");
+            SD.FPrintf(overview, "Right wheel power over 45\n");
             break;
         }
     }
@@ -209,24 +209,41 @@ void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     direction[1] = rotationDirection;
     direction[2] = rotationDirection;
 
-    std::string debugName = std::to_string((int)degrees) + " degree rotation";
-
+    std::string debugName = std::to_string((double)degrees) + " degree rotation";
     double projangle = 0;
+    degrees = fabs(degrees);
 
     while (projangle < degrees * M_PI / 180) {
-        projangle += rotationDirection * inchPerCount * ((newCount[0] - oldCount[0]) / robotRadius + (newCount[1] - oldCount[1]) / (sqrt(3) * robotRadius) - (newCount[2] - oldCount[2]) / (sqrt(3) * robotRadius));
-
         speedPID(); // Adjust motor speeds
+        projangle += inchPerCount * ((newCount[0] - oldCount[0]) / robotRadius + (newCount[1] - oldCount[1]) / (sqrt(3) * robotRadius) - (newCount[2] - oldCount[2]) / (sqrt(3) * robotRadius));
         DebugLogSection(overview, detailed, debugName);
 
-        // Emergency stop condition
-        if (power[0] > 45 || power[1] > 45 || power[2] > 45) {
+        if (power[0] > 45) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
+            LCD.WriteLine("Front wheel: Power over 45");
+            SD.FPrintf(overview, "Front wheel power over 45\n");
+            break;
+        }
+        if (power[1] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Left wheel: Power over 45");
+            SD.FPrintf(overview, "Left wheel power over 45\n");
+            break;
+        }
+        if (power[2] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Right Wheel: Power over 45");
+            SD.FPrintf(overview, "Right wheel power over 45\n");
             break;
         }
     }
-    relangle += projangle;
+    relangle += projangle * rotationDirection;
+    // Normalize relative angle
+    while (relangle >= 2 * M_PI) relangle -= 2 * M_PI;
+    while (relangle < 0) relangle += 2 * M_PI;
     FinalizeDebugging(overview, debugName);
     motorStop();
     Sleep(0.5);
@@ -254,6 +271,75 @@ void moveToCoord(double x, double y, const std::string& debugName, FEHFile *over
     moveVectorDistance(cos(robotVectorAngle) * 6, sin(robotVectorAngle) * 6, distance, debugName, overview, detailed);
 }
 
+void rotateToAngle(double degree, FEHFile *overview, FEHFile *detailed){
+    double degreeToTurn = degree - relangle * 180 / M_PI;
+
+    // Normalize to [-180, 180)
+    while (degreeToTurn >= 180.) degreeToTurn -= 360.;
+    while (degreeToTurn < -180.) degreeToTurn += 360.;
+    
+    rotateDegrees(degreeToTurn, overview, detailed);
+}
+
+// This is just for fun, it goes over the 45 power red screen limit very easy.
+void moveInCircle(double x, double y, double omega, double targetDistance, const std::string& debugName, FEHFile *overview, FEHFile *detailed) {
+    zero();
+    double vx = x;
+    double vy = y;
+    double robotRadius = 3.9375;
+
+    expectedSpeed[0] = fabs(vx + robotRadius * omega);
+    expectedSpeed[1] = fabs(vx * cos(M_PI / 3) - vy * sin(M_PI / 3) - robotRadius * omega);
+    expectedSpeed[2] = fabs(vx * cos(M_PI / 3) + vy * sin(M_PI / 3) - robotRadius * omega);
+    direction[0] = vx + robotRadius * omega >= 0 ? -1 : 1;
+    direction[1] = (vx * cos(M_PI / 3) - vy * sin(M_PI / 3) - robotRadius * omega >= 0) ? 1 : -1;
+    direction[2] = (vx * cos(M_PI / 3) + vy * sin(M_PI / 3) - robotRadius * omega >= 0) ? 1 : -1;
+    double rotationDirection = (omega > 0) ? 1 : -1;
+
+    double projx = 0;
+    double projy = 0;
+    double projomega = 0;
+
+    while(projx * projx + projy * projy < targetDistance * targetDistance){
+        speedPID();
+        // projx = inchPerCount * (newCount[0] + newCount[1] * cos(M_PI / 3) + newCount[2] * cos(M_PI / 3));
+        // projy = inchPerCount * (newCount[1] * sin(M_PI / 3) + newCount[2] * sin(M_PI / 3));
+        projx += inchPerCount * (-2 * (newCount[0] - oldCount[0]) + (1 - 2 / sqrt(3)) * (newCount[1] - oldCount[1]) + (1 + 2 / sqrt(3)) * (newCount[2] - oldCount[2]));
+        projy += inchPerCount * (1 / sqrt(3) * (newCount[1] - oldCount[1]) - 1 / sqrt(3) * (newCount[2] - oldCount[2]));
+        projomega += inchPerCount * ((newCount[0] - oldCount[0]) / robotRadius + (newCount[1] - oldCount[1]) / (sqrt(3) * robotRadius) - (newCount[2] - oldCount[2]) / (sqrt(3) * robotRadius));
+        DebugLogSection(overview, detailed, debugName);
+        
+        minCDS = std::min(minCDS, CdS.Value());
+
+        if (power[0] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Front wheel: Power over 45");
+            SD.FPrintf(overview, "Front wheel power over 45\n");
+            break;
+        }
+        if (power[1] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Left wheel: Power over 45");
+            SD.FPrintf(overview, "Left wheel power over 45\n");
+            break;
+        }
+        if (power[2] > 45) {
+            LCD.SetBackgroundColor(RED);
+            LCD.Clear();
+            LCD.WriteLine("Right Wheel: Power over 45");
+            SD.FPrintf(overview, "Right wheel power over 45\n");
+            break;
+        }
+    }
+    relax += sqrt(projx * projx + projy * projy) * cos(relangle + atan2(y, x) - M_PI_2);
+    relay += sqrt(projx * projx + projy * projy) * sin(relangle + atan2(y, x) - M_PI_2);
+    relangle += projomega * rotationDirection;
+    FinalizeDebugging(overview, debugName);
+    motorStop();
+    Sleep(0.5);
+}
 
 
 int main(){
@@ -278,18 +364,23 @@ int main(){
     relay = 0;
     relangle = 135 * M_PI / 180;
 
-    moveToCoord(10, 10, "Coordinate movement", overviewFptr, detailedFptr);
-    moveToCoord(0, 0, "Coordinate movement", overviewFptr, detailedFptr);
-    rotateDegrees(90, overviewFptr, detailedFptr);
-    moveToCoord(-10, 10, "Coordinate movement", overviewFptr, detailedFptr);
-    moveToCoord(0, 0, "Coordinate movement", overviewFptr, detailedFptr);
-    rotateDegrees(90, overviewFptr, detailedFptr);
-    moveToCoord(-10, -10, "Coordinate movement", overviewFptr, detailedFptr);
-    moveToCoord(0, 0, "Coordinate movement", overviewFptr, detailedFptr);
-    rotateDegrees(90, overviewFptr, detailedFptr);
-    moveToCoord(10, -10, "Coordinate movement", overviewFptr, detailedFptr);
-    moveToCoord(0, 0, "Coordinate movement", overviewFptr, detailedFptr);
-    rotateDegrees(90, overviewFptr, detailedFptr);
+    moveInCircle(0, 3, M_PI / 6, 1000, "Move and rotate", overviewFptr, detailedFptr);
+
+    moveToCoord(10, 10, "Coordinate movement 1", overviewFptr, detailedFptr);
+    moveToCoord(0, 0, "Coordinate movement 2", overviewFptr, detailedFptr);
+    rotateToAngle(90, overviewFptr, detailedFptr);
+
+    moveToCoord(-10, 10, "Coordinate movement 3", overviewFptr, detailedFptr);
+    moveToCoord(0, 0, "Coordinate movement 4", overviewFptr, detailedFptr);
+    rotateToAngle(150, overviewFptr, detailedFptr);
+
+    moveToCoord(-10, -10, "Coordinate movement 5", overviewFptr, detailedFptr);
+    moveToCoord(0, 0, "Coordinate movement 6", overviewFptr, detailedFptr);
+    rotateToAngle(170, overviewFptr, detailedFptr);
+
+    moveToCoord(10, -10, "Coordinate movement 7", overviewFptr, detailedFptr);
+    moveToCoord(0, 0, "Coordinate movement 8", overviewFptr, detailedFptr);
+    rotateToAngle(-90, overviewFptr, detailedFptr);
     
 
     // // Start
