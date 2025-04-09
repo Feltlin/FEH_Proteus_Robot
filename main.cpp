@@ -14,17 +14,17 @@
 #include <algorithm>
 
 DigitalEncoder encoder[3] = {
-    DigitalEncoder(FEHIO::P0_1),
     DigitalEncoder(FEHIO::P0_2),
-    DigitalEncoder(FEHIO::P0_3),
+    DigitalEncoder(FEHIO::P0_4),
+    DigitalEncoder(FEHIO::P0_7),
 };
 FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor0, 9.0),
     FEHMotor(FEHMotor::Motor1, 9.0),
     FEHMotor(FEHMotor::Motor2, 9.0),
 };
-FEHServo armServo(FEHServo::Servo0);
-FEHServo prongServo(FEHServo::Servo1);
+FEHServo armServo(FEHServo::Servo7);
+FEHServo prongServo(FEHServo::Servo0);
 AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_0);
 
 
@@ -148,7 +148,7 @@ void FinalizeDebugging(FEHFile *overview, std::string sectionName)
     SD.FPrintf(overview, "\tEnd Time: %f\n\n", sectionName.c_str(), TimeNow());
 }
 
-void moveVectorDistance(double x, double y, double targetDistance, const std::string& debugName, FEHFile *overview, FEHFile *detailed) {
+void moveVectorDistance(double x, double y, double targetDistance, const std::string& debugName, FEHFile *overview, FEHFile *detailed, float startAngle = -1, float endAngle = -1) {
     zero();
     vectorDirection(x, y);
 
@@ -161,6 +161,39 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
         // projy = inchPerCount * (newCount[1] * sin(M_PI / 3) + newCount[2] * sin(M_PI / 3));
         projx += inchPerCount * (-2 * (newCount[0] - oldCount[0]) + (1 - 2 / sqrt(3)) * (newCount[1] - oldCount[1]) + (1 + 2 / sqrt(3)) * (newCount[2] - oldCount[2]));
         projy += inchPerCount * (1 / sqrt(3) * (newCount[1] - oldCount[1]) - 1 / sqrt(3) * (newCount[2] - oldCount[2]));
+
+        bool angleNotReached = true;
+        if (startAngle != -1 && endAngle != -1 && angleNotReached)
+        {
+            if (startAngle < endAngle)
+            {
+                if (fabs(startAngle-endAngle) < 1)
+                {
+                    startAngle = endAngle;
+                }
+                else
+                {
+                    ++startAngle;
+                }
+                armServo.SetDegree(startAngle);
+            }
+            else if (endAngle < startAngle)
+            {
+                if (fabs(startAngle-endAngle) < 1)
+                {
+                    startAngle = endAngle;
+                }
+                else
+                {
+                    --startAngle;
+                }
+            }
+            else
+            {
+                angleNotReached = false;
+            }
+        }
+
         DebugLogSection(overview, detailed, debugName);
         
         minCDS = std::min(minCDS, CdS.Value());
@@ -294,8 +327,9 @@ int main(){
 
     zero();
     LCD.Clear();
+    RCS.InitializeTouchMenu("1020C8WIE");
+
     // Wait for light
-    prongServo.SetDegree(0);
     while (CDS() > 0.9){}
 
     // Find the relative starting point x,y coordinates
@@ -303,40 +337,49 @@ int main(){
     relay = 0;
     relangle = 135 * M_PI / 180;
 
-    // // Start
-    // relangle = 135;
-    // moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
-    // moveVectorDistance(0, 6, 2.5, std::string("Move Forward"), overviewFptr, detailedFptr);
+    // Start
+    relangle = 135;
+    armServo.SetDegree(40);
+    prongServo.SetDegree(0);
+    moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 2.5, std::string("Move Forward"), overviewFptr, detailedFptr);
 
-    // // Compost bin
-    // rotateDegrees(135, overviewFptr, detailedFptr);
-    // moveVectorDistance(6, 0, 5, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
-    // moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
-    // moveVectorDistance(0, -3, 0.75, std::string("Back up slightly"), overviewFptr, detailedFptr);
-    // moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-    // servoSetDegree(1, 150);
-    // moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-    // servoSetDegree(150, 1);
-    // moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-    // servoSetDegree(1, 150);
-    // moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-    // servoSetDegree(150, 1);
-    // moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-    // servoSetDegree(1, 150);
-    // moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    // Compost bin
+    rotateDegrees(135, overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 6, std::string("Move closer to compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -3, 0.5, std::string("Back up slightly"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+    servoSetDegree(1, 150);
+    for(int i = 0; i < 2; ++i){
+        moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+        servoSetDegree(150, 1);
+        moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
+        moveVectorDistance(0, -3, 0.58, std::string("Back up slightly"), overviewFptr, detailedFptr);
+        moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
+        servoSetDegree(1, 150);
+    }
+    moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
 
-    // // Apple bucket
-    // moveVectorDistance(0, -6, 23, std::string("Back up"), overviewFptr, detailedFptr);
-    // rotateDegrees(-180, overviewFptr, detailedFptr);
-    // // Set lever arm angle
-    // moveVectorDistance(-6, 0, 8, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
-    // // Set lever arm angle to pick up bucket
-    // moveVectorDistance(6, 0, 8, std::string("Move right to the trunk"), overviewFptr, detailedFptr);
+    // Apple bucket
+    moveVectorDistance(0, -6, 29, std::string("Back up"), overviewFptr, detailedFptr, 40, 153);
+    rotateDegrees(-180, overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 8, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
+    armServo.SetDegree(130);
+    moveVectorDistance(0, -6, 10, std::string("Move backward"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 23, std::string("Move right to the wall to go up ramp"), overviewFptr, detailedFptr, 130, 73);
+    rotateDegrees(90, overviewFptr, detailedFptr);
+    moveVectorDistance(0, -4, 2, std::string("Normalize against wall"), overviewFptr, detailedFptr, 130, 73);
+    moveVectorDistance(0, 4, 1.5, std::string("Get away from right wall to rotate"), overviewFptr, detailedFptr, 130, 73);
+    rotateDegrees(-90, overviewFptr, detailedFptr);
+    moveVectorDistance(0, 6, 30, std::string("Go up ramp"), overviewFptr, detailedFptr, 130, 73);
 
+    
     
 
     // Window
-    Sleep(3.0);
+    Sleep(10.0);
     SD.FPrintf(overviewFptr, "\n-- Begin Window section --\n\n\n");
     moveVectorDistance(0, 6, 3, std::string("Normalize into right wall"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -6, 8, std::string("Move closer to window"), overviewFptr, detailedFptr);
@@ -352,6 +395,7 @@ int main(){
 
     // Red/Blue button
     SD.FPrintf(overviewFptr, "\n-- Begin Red/Blue button section --\n\n\n");
+    moveVectorDistance(0, -6, 2, std::string("Inch backward to normalize against window"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 11.3, std::string("Inch forward out of window, align with black stripe"), overviewFptr, detailedFptr);
     rotateDegrees(90, overviewFptr, detailedFptr);
     minCDS = 3.0;
@@ -400,7 +444,7 @@ int main(){
     rotateDegrees(-135, overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 3, std::string("Move to lever 0"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 3 * lever, std::string("Move to lever 1 or 2"), overviewFptr, detailedFptr);
-    moveVectorDistance(-6, 0, 5, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 8, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     // Servo mortor flip
     // Move backward
     // Lower the arm
