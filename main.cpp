@@ -300,6 +300,7 @@ int main(){
 
 
     while(true){
+        text.display("CdS value: " + std::to_string(CdS.Value()), 0xffffff, 70, 10);
         ++frame;
         if(frame == 20){
             frame = 0;
