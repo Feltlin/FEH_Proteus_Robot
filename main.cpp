@@ -352,14 +352,14 @@ int main(){
     moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -3, 0.75, std::string("Back up slightly"), overviewFptr, detailedFptr);
     moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-    servoSetDegree(1, 150);
+    servoSetDegree(1, 155);
     for(int i = 0; i < 2; ++i){
         moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(150, 1);
+        servoSetDegree(155, 1);
         moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
         moveVectorDistance(0, -3, 0.7, std::string("Back up slightly"), overviewFptr, detailedFptr);
         moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(1, 150);
+        servoSetDegree(1, 155);
     }
     moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
@@ -371,7 +371,7 @@ int main(){
     armServo.SetDegree(130);
     moveVectorDistance(0, -6, 10, std::string("Move backward"), overviewFptr, detailedFptr);
     moveVectorDistance(6, 0, 23, std::string("Move right to the wall to go up ramp"), overviewFptr, detailedFptr);
-    for (int i=130; i<73; --i)
+    for (int i=130; i>73; --i)
     {
         armServo.SetDegree(i);
         Sleep(0.05);
