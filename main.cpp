@@ -47,8 +47,6 @@ int newCount[3] = {0, 0, 0}, oldCount[3] = {0, 0, 0};
 unsigned long newTime[3] = {0, 0, 0}, oldTime[3] = {0, 0, 0};
 
 bool switchingState = false;
-int sweepState = 0;
-int sweepCount = 0;
 float minCDS = 3;
 std::string lightColor = "nothing";
 
@@ -157,13 +155,15 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
     double projx = 0;
     double projy = 0;
 
+    double powerThreshold = 55;
+
     while(projx * projx + projy * projy < targetDistance * targetDistance){
         speedPID();
         // projx = inchPerCount * (newCount[0] + newCount[1] * cos(M_PI / 3) + newCount[2] * cos(M_PI / 3));
         // projy = inchPerCount * (newCount[1] * sin(M_PI / 3) + newCount[2] * sin(M_PI / 3));
         projx += inchPerCount * (-2 * (newCount[0] - oldCount[0]) + (1 - 2 / sqrt(3)) * (newCount[1] - oldCount[1]) + (1 + 2 / sqrt(3)) * (newCount[2] - oldCount[2]));
         projy += inchPerCount * (1 / sqrt(3) * (newCount[1] - oldCount[1]) - 1 / sqrt(3) * (newCount[2] - oldCount[2]));
-
+        
         bool angleNotReached = true;
         if (startAngle != -1 && endAngle != -1 && angleNotReached)
         {
@@ -200,25 +200,25 @@ void moveVectorDistance(double x, double y, double targetDistance, const std::st
         
         minCDS = std::min(minCDS, CdS.Value());
 
-        if (power[0] > 45) {
+        if (power[0] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Front wheel: Power over 45");
-            SD.FPrintf(overview, "Front wheel power over 45\n");
+            LCD.WriteLine("Front wheel: Power over threshold");
+            SD.FPrintf(overview, "Front wheel power over threshold\n");
             break;
         }
-        if (power[1] > 45) {
+        if (power[1] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Left wheel: Power over 45");
-            SD.FPrintf(overview, "Left wheel power over 45\n");
+            LCD.WriteLine("Left wheel: Power over threshold");
+            SD.FPrintf(overview, "Left wheel power over threshold\n");
             break;
         }
-        if (power[2] > 45) {
+        if (power[2] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Right Wheel: Power over 45");
-            SD.FPrintf(overview, "Right wheel power over 45\n");
+            LCD.WriteLine("Right Wheel: Power over threshold");
+            SD.FPrintf(overview, "Right wheel power over threshold\n");
             break;
         }
     }
@@ -248,30 +248,32 @@ void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     double projangle = 0;
     degrees = fabs(degrees);
 
+    double powerThreshold = 55;
+
     while (projangle < degrees * M_PI / 180) {
         speedPID(); // Adjust motor speeds
         projangle += inchPerCount * ((newCount[0] - oldCount[0]) / robotRadius + (newCount[1] - oldCount[1]) / (sqrt(3) * robotRadius) - (newCount[2] - oldCount[2]) / (sqrt(3) * robotRadius));
         DebugLogSection(overview, detailed, debugName);
 
-        if (power[0] > 45) {
+        if (power[0] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Front wheel: Power over 45");
-            SD.FPrintf(overview, "Front wheel power over 45\n");
+            LCD.WriteLine("Front wheel: Power over threshold");
+            SD.FPrintf(overview, "Front wheel power over threshold\n");
             break;
         }
-        if (power[1] > 45) {
+        if (power[1] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Left wheel: Power over 45");
-            SD.FPrintf(overview, "Left wheel power over 45\n");
+            LCD.WriteLine("Left wheel: Power over threshold");
+            SD.FPrintf(overview, "Left wheel power over threshold\n");
             break;
         }
-        if (power[2] > 45) {
+        if (power[2] > powerThreshold) {
             LCD.SetBackgroundColor(RED);
             LCD.Clear();
-            LCD.WriteLine("Right Wheel: Power over 45");
-            SD.FPrintf(overview, "Right wheel power over 45\n");
+            LCD.WriteLine("Right Wheel: Power over threshold");
+            SD.FPrintf(overview, "Right wheel power over threshold\n");
             break;
         }
     }
@@ -332,7 +334,16 @@ int main(){
     RCS.InitializeTouchMenu("1020C8WIE");
 
     // Wait for light
-    while (CDS() > 0.9){}
+
+    // CDS cell values:
+    // 2.1 = nothing
+    // 1.2-1.5 = blue
+    // 0.54-0.75 = red
+
+    float blueMax = 1.5;
+    float redMax = 1.0;
+
+    while (CDS() > blueMax){}
 
     // Find the relative starting point x,y coordinates
     relax = 0;
@@ -355,44 +366,52 @@ int main(){
     servoSetDegree(1, 155);
     for(int i = 0; i < 2; ++i){
         moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(155, 1);
+        servoSetDegree(150, 1);
         moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
         moveVectorDistance(0, -3, 0.7, std::string("Back up slightly"), overviewFptr, detailedFptr);
         moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(1, 155);
+        servoSetDegree(1, 150);
     }
     moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
 
     // Apple bucket
-    moveVectorDistance(0, -6, 29, std::string("Back up"), overviewFptr, detailedFptr, 40, 158);
-    rotateDegrees(-180, overviewFptr, detailedFptr);
-    moveVectorDistance(-6, 0, 8, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
-    armServo.SetDegree(130);
-    moveVectorDistance(0, -6, 10, std::string("Move backward"), overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 23, std::string("Move right to the wall to go up ramp"), overviewFptr, detailedFptr);
-    for (int i=130; i>73; --i)
+    moveVectorDistance(0, -6, 29.5, std::string("Back up"), overviewFptr, detailedFptr);
+    // 40 to 158
+    for (int i=40; i<158; ++i)
     {
         armServo.SetDegree(i);
-        Sleep(0.05);
+        Sleep(0.025);
     }
-    armServo.SetDegree(73);
-    rotateDegrees(90, overviewFptr, detailedFptr);
-    moveVectorDistance(0, -4, 3, std::string("Normalize against wall"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 4, 2, std::string("Get away from right wall to rotate"), overviewFptr, detailedFptr);
-    rotateDegrees(-90, overviewFptr, detailedFptr);
-    moveVectorDistance(0, 6, 30, std::string("Go up ramp"), overviewFptr, detailedFptr);
+    armServo.SetDegree(158);
+    rotateDegrees(-180, overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 6.25, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
+    armServo.SetDegree(130);
+    for (int i=130; i>60; --i)
+    {
+        armServo.SetDegree(i);
+        Sleep(0.025);
+    }
+    moveVectorDistance(0, -6, 8, std::string("Move backward"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 20.375, std::string("Move right to the wall to go up ramp"), overviewFptr, detailedFptr);
+    armServo.SetDegree(60);
+    // rotateDegrees(90, overviewFptr, detailedFptr);
+    // moveVectorDistance(0, -4, 3, std::string("Normalize against wall"), overviewFptr, detailedFptr);
+    // moveVectorDistance(0, 4, 2, std::string("Get away from right wall to rotate"), overviewFptr, detailedFptr);
+    // rotateDegrees(-90, overviewFptr, detailedFptr);
+    moveVectorDistance(0, 7, 30, std::string("Go up ramp"), overviewFptr, detailedFptr);
     rotateDegrees(90, overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 4, std::string("Normalize into right wall"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 2, std::string("Get away from right wall"), overviewFptr, detailedFptr);
     rotateDegrees(190, overviewFptr, detailedFptr);
-    for (int i=73; i<119; i++)
+    for (int i=60; i<130; i++)
     {
         armServo.SetDegree(i);
-        Sleep(0.05);
+        Sleep(0.025);
     }
-    armServo.SetDegree(119);
     armServo.SetDegree(130);
+    Sleep(0.5);
+    armServo.SetDegree(122);
     Sleep(0.5);
     moveVectorDistance(4.5, 0, 7.5, std::string("Leave bucket on table"), overviewFptr, detailedFptr);
     rotateDegrees(-10, overviewFptr, detailedFptr);
@@ -429,7 +448,7 @@ int main(){
     minCDS = 3.0;
     moveVectorDistance(0, 3, 5, std::string("Inch forward to find light"), overviewFptr, detailedFptr);
     std::string color = "nothing";
-    if (minCDS < 0.48){
+    if (minCDS < redMax){
         //Red light seen
         SD.FPrintf(overviewFptr, "\nRed light seen!\n\n");
         color = "red";
@@ -440,7 +459,7 @@ int main(){
     }
     else{
         //Go for blue
-        if(minCDS < 0.9){
+        if(minCDS < blueMax){
             SD.FPrintf(overviewFptr, "\nBlue light seen!\n\n");
             LCD.SetBackgroundColor(BLUE);
             LCD.Clear();
@@ -464,8 +483,8 @@ int main(){
     {
         moveVectorDistance(3, 0, 1.5, std::string("Shift right to middle"), overviewFptr, detailedFptr);
     }
-
-
+    Sleep(5.0);
+    
     // Lever flip
     SD.FPrintf(overviewFptr, "\n-- Begin Lever flip section --\n\n\n");
     int lever = RCS.GetLever();
