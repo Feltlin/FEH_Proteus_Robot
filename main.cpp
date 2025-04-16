@@ -24,7 +24,7 @@ FEHMotor motor[3] = {
     FEHMotor(FEHMotor::Motor2, 9.0),
 };
 FEHServo armServo(FEHServo::Servo7);
-FEHServo prongServo(FEHServo::Servo0);
+FEHMotor prongMotor(FEHMotor::Motor3, 5.0);
 AnalogInputPin CdS = AnalogInputPin(FEHIO::P0_0);
 
 
@@ -49,6 +49,8 @@ unsigned long newTime[3] = {0, 0, 0}, oldTime[3] = {0, 0, 0};
 bool switchingState = false;
 float minCDS = 3;
 std::string lightColor = "nothing";
+
+double powerThreshold = 80;
 
 // Text text;
 
@@ -80,7 +82,7 @@ void zero(){
 }
 
 void speedPID(){
-    Sleep(15);
+    Sleep(10);
     for(int i = 0; i < 3; ++i){
         oldTime[i] = newTime[i];
         newTime[i] = TimeNowMSec();
@@ -94,7 +96,7 @@ void speedPID(){
         PTerm[i] = newError[i] * PConst[i];
         ITerm[i] = errorSum[i] * IConst[i];
         DTerm[i] = errorDel[i] * DConst[i];
-        power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), 50.);
+        power[i] = std::min(std::max(power[i] + PTerm[i] + ITerm[i] + DTerm[i], 0.), powerThreshold);
         motor[i].SetPercent(power[i] * direction[i]);
     }
 }
@@ -150,12 +152,10 @@ double armStepSize = 0.5;
 
 void moveVectorDistance(double x, double y, double targetDistance, const std::string& debugName, FEHFile *overview, FEHFile *detailed) {
     zero();
-    vectorDirection(x, y);
+    vectorDirection(x * 1.5, y * 1.5);
 
     double projx = 0;
     double projy = 0;
-
-    double powerThreshold = 55;
 
     while(projx * projx + projy * projy < targetDistance * targetDistance){
         speedPID();
@@ -216,8 +216,6 @@ void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     double projangle = 0;
     degrees = fabs(degrees);
 
-    double powerThreshold = 55;
-
     while (projangle < degrees * M_PI / 180) {
         speedPID(); // Adjust motor speeds
         projangle += inchPerCount * ((newCount[0] - oldCount[0]) / robotRadius + (newCount[1] - oldCount[1]) / (sqrt(3) * robotRadius) - (newCount[2] - oldCount[2]) / (sqrt(3) * robotRadius));
@@ -251,25 +249,7 @@ void rotateDegrees(double degrees, FEHFile *overview, FEHFile *detailed) {
     while (relangle < 0) relangle += 2 * M_PI;
     FinalizeDebugging(overview, debugName);
     motorStop();
-    Sleep(0.5);
-}
-
-void servoSetDegree(int angle0, int angle1){
-    double countLimit = 0;
-    if(angle0 < angle1){
-        for (int i = angle0; i <= angle1 && countLimit < 1000; i++){
-            prongServo.SetDegree(i);
-            ++countLimit;
-        }
-    }
-    else if(angle0 > angle1){
-        for (int i = angle0; i >= angle1 && countLimit < 1000; i--){
-            prongServo.SetDegree(i);
-            ++countLimit;
-        }
-    }
-    
-    Sleep(0.2);
+    Sleep(0.35);
 }
 
 void moveToCoord(double x, double y, const std::string& debugName, FEHFile *overview, FEHFile *detailed){
@@ -295,8 +275,6 @@ int main(){
     
     armServo.SetMin(500);
     armServo.SetMax(2500);
-    prongServo.SetMin(820);
-    prongServo.SetMax(2205);
 
     SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.2)/0.7*100.);
 
@@ -324,7 +302,6 @@ int main(){
     // Start
     relangle = 135;
     armServo.SetDegree(80);
-    prongServo.SetDegree(0);
     moveVectorDistance(0, -6, 1.5, std::string("Back Up Into Start Button"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 2.5, std::string("Move Forward"), overviewFptr, detailedFptr);
 
@@ -334,16 +311,13 @@ int main(){
     moveVectorDistance(0, 6, 9, std::string("Move into wall, normalize"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -3, 0.75, std::string("Back up slightly"), overviewFptr, detailedFptr);
     moveVectorDistance(6, 0, 4.5, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-    servoSetDegree(0, 155);
-    for(int i = 0; i < 2; ++i){
-        moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(150, 0);
-        moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
-        //Die?
-        moveVectorDistance(0, -3, 0.67, std::string("Back up slightly"), overviewFptr, detailedFptr);
-        moveVectorDistance(6, 0, 1.25, std::string("Move to compost bin"), overviewFptr, detailedFptr);
-        servoSetDegree(0, 150);
-    }
+    prongMotor.SetPercent(-80);
+    Sleep(1.68);
+    prongMotor.Stop();
+    Sleep(1.0);
+    prongMotor.SetPercent(80);
+    Sleep(1.7);
+    prongMotor.Stop();
     moveVectorDistance(-6, 0, 1.25, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 3, 1.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
 
@@ -353,7 +327,7 @@ int main(){
     for (int i=80; i<158; ++i)
     {
         armServo.SetDegree(i);
-        Sleep(0.025);
+        Sleep(0.02);
     }
     armServo.SetDegree(158);
     rotateDegrees(-180, overviewFptr, detailedFptr);
@@ -362,7 +336,7 @@ int main(){
     for (int i=130; i>50; --i)
     {
         armServo.SetDegree(i);
-        Sleep(0.025);
+        Sleep(0.02);
     }
     moveVectorDistance(0, -6, 8, std::string("Move backward"), overviewFptr, detailedFptr);
     moveVectorDistance(6, 0, 19.7, std::string("Move right to the wall to go up ramp"), overviewFptr, detailedFptr);
@@ -384,12 +358,12 @@ int main(){
     for (int i=50; i<128; i++)
     {
         armServo.SetDegree(i);
-        Sleep(0.03);
+        Sleep(0.02);
     }
     armServo.SetDegree(128);
-    Sleep(0.5);
+    Sleep(0.4);
     armServo.SetDegree(125);
-    Sleep(0.5);
+    Sleep(0.4);
     moveVectorDistance(4.5, 0, 4, std::string("Leave bucket on table"), overviewFptr, detailedFptr);
     rotateDegrees(12.5, overviewFptr, detailedFptr);
     armServo.SetDegree(40);
@@ -403,14 +377,13 @@ int main(){
     
 
     // Window
-    Sleep(1.0);
+    Sleep(0.2);
     SD.FPrintf(overviewFptr, "\n-- Begin Window section --\n\n\n");
-    moveVectorDistance(0, 6, 3, std::string("Normalize into right wall"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -6, 8, std::string("Move closer to window"), overviewFptr, detailedFptr);
     rotateDegrees(90, overviewFptr, detailedFptr);
     moveVectorDistance(0, -6, 6, std::string("Back closer to window"), overviewFptr, detailedFptr);
     moveVectorDistance(-6, 0, 7, std::string("Go left closer to window"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, -6, 8, std::string("Back into window"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 8, std::string("Back up into window"), overviewFptr, detailedFptr);
     moveVectorDistance(-6, 0, 7, std::string("Open window"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 1.75, std::string("Inch forward out of window"), overviewFptr, detailedFptr);
     moveVectorDistance(-6, 0, 1.25, std::string("Inch left of window"), overviewFptr, detailedFptr);
@@ -419,11 +392,12 @@ int main(){
 
     // Red/Blue button
     SD.FPrintf(overviewFptr, "\n-- Begin Red/Blue button section --\n\n\n");
+    moveVectorDistance(-6, 0, 0.58, std::string("Inch left before normalize against window"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -6, 2, std::string("Inch backward to normalize against window"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 11.65, std::string("Inch forward out of window, align with black stripe"), overviewFptr, detailedFptr);
     rotateDegrees(90, overviewFptr, detailedFptr);
     minCDS = 3.0;
-    moveVectorDistance(0, 3, 5, std::string("Inch forward to find light"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 3, 4.75, std::string("Inch forward to find light"), overviewFptr, detailedFptr);
     std::string color = "nothing";
     if (minCDS < redMax){
         //Red light seen
@@ -432,7 +406,7 @@ int main(){
         LCD.SetBackgroundColor(RED);
         LCD.Clear();
 
-        moveVectorDistance(3, 0, 1.25, std::string("Shift right for red button"), overviewFptr, detailedFptr);
+        moveVectorDistance(6, 0, 1.5, std::string("Shift right for red button"), overviewFptr, detailedFptr);
     }
     else{
         //Go for blue
@@ -448,7 +422,7 @@ int main(){
         }
         color = "blue";
         
-        moveVectorDistance(-3, 0, 1.25, std::string("Shift left for blue button"), overviewFptr, detailedFptr);
+        moveVectorDistance(-6, 0, 1.5, std::string("Shift left for blue button"), overviewFptr, detailedFptr);
     }
     moveVectorDistance(0, 6, 7, std::string("Go to touch button"), overviewFptr, detailedFptr);
     moveVectorDistance(0, -6, 7, std::string("Unpress button"), overviewFptr, detailedFptr);
@@ -460,7 +434,6 @@ int main(){
     {
         moveVectorDistance(3, 0, 1.5, std::string("Shift right to middle"), overviewFptr, detailedFptr);
     }
-    Sleep(3.0);
     
     // Lever flip
     SD.FPrintf(overviewFptr, "\n-- Begin Lever flip section --\n\n\n");
@@ -468,26 +441,33 @@ int main(){
     rotateDegrees(-135, overviewFptr, detailedFptr);
     moveVectorDistance(0, 6, 1.2, std::string("Move to lever 0"), overviewFptr, detailedFptr);
     //moveVectorDistance(0, 6, 3 * lever, std::string("Move to lever 1 or 2"), overviewFptr, detailedFptr);
-    moveVectorDistance(-6, 0, 6, std::string("Move closer to lever"), overviewFptr, detailedFptr);
-    Sleep(3.0);
+    moveVectorDistance(-6, 0, 5.5, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     // Servo mortor flip
 
     armServo.SetDegree(60);
-    Sleep(1.0);
+    Sleep(0.4);
     armServo.SetDegree(80);
-    Sleep(1.0);
+    Sleep(0.4);
     armServo.SetDegree(120);
-    Sleep(1.0);
+    Sleep(0.4);
     armServo.SetDegree(150);
-    Sleep(1.0);
-    armServo.SetDegree(180);
-    // Move backward
-    // Lower the arm
-    // Move forward
-    // Raise the arm
-    moveVectorDistance(6, 0, 5, std::string("Move away from lever"), overviewFptr, detailedFptr);
+    Sleep(0.4);
+    armServo.SetDegree(175);
+    moveVectorDistance(6, 0, 1, std::string("Move away from lever"), overviewFptr, detailedFptr);
+    
+    Sleep(0.4);
+    armServo.SetDegree(160);
+    Sleep(0.2);
+    armServo.SetDegree(130);
+    Sleep(0.2);
+    armServo.SetDegree(90);
+    Sleep(0.2);
+    armServo.SetDegree(50);
+    moveVectorDistance(-7.5, 0, 5, std::string("Move towards lever, flip up"), overviewFptr, detailedFptr);
+
+    moveVectorDistance(6, 0, 6, std::string("Move away from lever real"), overviewFptr, detailedFptr);
     //moveVectorDistance(0, -6, 3 * lever, std::string("Move to lever 1 or 2"), overviewFptr, detailedFptr);
-    moveVectorDistance(6, 0, 6, std::string("Move away from lever"), overviewFptr, detailedFptr);
+    moveVectorDistance(6, 0, 6, std::string("Move away from lever again"), overviewFptr, detailedFptr);
     rotateDegrees(135, overviewFptr, detailedFptr);
 
 
