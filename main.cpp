@@ -457,7 +457,14 @@ int main(){
     {
         SD.FPrintf(overviewFptr, "\n\nMASSIVE PROBLEM. LEVER NOT 0, 1, OR 2\n\n");
     }
-    moveVectorDistance(-4, 0, 6.45 + 0.15*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+
+    // Pull down the lever
+    if(lever == 0 || lever == 1){
+        moveVectorDistance(-4, 0, 6.45 + 0.15*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+    }
+    else{
+        moveVectorDistance(-4, 0, 6.45 + 0.17*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+    }
     // Servo mortor flip
 
     armServo.SetDegree(60);
