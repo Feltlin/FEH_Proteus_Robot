@@ -319,7 +319,7 @@ int main(){
     Sleep(1.7);
     prongMotor.Stop();
     moveVectorDistance(-6, 0, 1.75, std::string("Move away from compost bin"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 3, 2, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 3, 2.5, std::string("Move into wall, slightly normalize"), overviewFptr, detailedFptr);
 
     // Apple bucket
     moveVectorDistance(0, -6, 29.5, std::string("Back up"), overviewFptr, detailedFptr);
@@ -327,11 +327,10 @@ int main(){
     for (int i=80; i<158; ++i)
     {
         armServo.SetDegree(i);
-        Sleep(0.02);
     }
     armServo.SetDegree(158);
     rotateDegrees(-180, overviewFptr, detailedFptr);
-    moveVectorDistance(-6, 0, 5.3, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
+    moveVectorDistance(-6, 0, 5.55, std::string("Move left to the trunk"), overviewFptr, detailedFptr);
     armServo.SetDegree(130);
     for (int i=130; i>50; --i)
     {
@@ -381,9 +380,9 @@ int main(){
     SD.FPrintf(overviewFptr, "\n-- Begin Window section --\n\n\n");
     moveVectorDistance(0, -6, 8, std::string("Move closer to window"), overviewFptr, detailedFptr);
     rotateDegrees(90, overviewFptr, detailedFptr);
-    moveVectorDistance(0, -6, 6, std::string("Back closer to window"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 3, std::string("Back closer to window"), overviewFptr, detailedFptr);
     moveVectorDistance(-6, 0, 7, std::string("Go left closer to window"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, -6, 8, std::string("Back up into window"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -6, 11, std::string("Back up into window"), overviewFptr, detailedFptr);
     moveVectorDistance(-6, 0, 7, std::string("Open window"), overviewFptr, detailedFptr);
     moveVectorDistance(0, 4.5, 1.5, std::string("Inch forward out of window"), overviewFptr, detailedFptr);
     moveVectorDistance(-4.5, 0, 1, std::string("Inch left of window"), overviewFptr, detailedFptr);
@@ -447,11 +446,11 @@ int main(){
     }
     else if (lever == 1)
     {
-        moveVectorDistance(0, 4, 3 + 6, std::string("Move to lever 1"), overviewFptr, detailedFptr);
+        moveVectorDistance(0, 4, 4.15 + 6, std::string("Move to lever 1"), overviewFptr, detailedFptr);
     }
     else if (lever == 2)
     {
-        moveVectorDistance(0, 4, 5.75 + 12, std::string("Move to lever 2"), overviewFptr, detailedFptr);
+        moveVectorDistance(0, 4, 5.9 + 12, std::string("Move to lever 2"), overviewFptr, detailedFptr);
     }
     else
     {
@@ -459,8 +458,11 @@ int main(){
     }
 
     // Pull down the lever
-    if(lever == 0 || lever == 1){
+    if(lever == 0){
         moveVectorDistance(-4, 0, 6.45 + 0.15*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+    }
+    else if(lever ==1){
+        moveVectorDistance(-4, 0, 6.45 + 0.16*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     }
     else{
         moveVectorDistance(-4, 0, 6.45 + 0.17*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
@@ -469,9 +471,7 @@ int main(){
 
     armServo.SetDegree(60);
     Sleep(0.2);
-    armServo.SetDegree(120);
-    Sleep(0.4);
-    armServo.SetDegree(175);
+    armServo.SetDegree(178);
     Sleep(0.4);
     moveVectorDistance(6, 0, 1.2, std::string("Move away from lever"), overviewFptr, detailedFptr);
     
@@ -492,19 +492,19 @@ int main(){
     }
     else if (lever == 1)
     {
-        moveVectorDistance(0, -4, 2.35 + 6, std::string("Move to lever 1"), overviewFptr, detailedFptr);
+        moveVectorDistance(0, -4, 4.05 + 6, std::string("Move to lever 1"), overviewFptr, detailedFptr);
     }
     else if (lever == 2)
     {
-        moveVectorDistance(0, -4, 5.55 + 12, std::string("Move to lever 2"), overviewFptr, detailedFptr);
+        moveVectorDistance(0, -4, 5.75 + 12, std::string("Move to lever 2"), overviewFptr, detailedFptr);
     }
     moveVectorDistance(6, 0, 6, std::string("Move away from lever again"), overviewFptr, detailedFptr);
     rotateDegrees(135, overviewFptr, detailedFptr);
 
 
     // Return to button
-    moveVectorDistance(0, -7, 32.5, std::string("Back into right wall"), overviewFptr, detailedFptr);
-    moveVectorDistance(0, 7, 2, std::string("Get away from wall"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, -7, 35, std::string("Back into right wall"), overviewFptr, detailedFptr);
+    moveVectorDistance(0, 7, 2.5, std::string("Get away from wall"), overviewFptr, detailedFptr);
     rotateDegrees(-90, overviewFptr, detailedFptr);
     moveVectorDistance(0, -7, 58, std::string("Back down the ramp"), overviewFptr, detailedFptr);
     rotateDegrees(45, overviewFptr, detailedFptr); 
