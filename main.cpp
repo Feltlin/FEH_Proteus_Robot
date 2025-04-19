@@ -278,25 +278,33 @@ int main(){
 
     SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.2)/0.7*100.);
 
-    zero();
-    LCD.Clear();
     RCS.InitializeTouchMenu("1020C8WIE");
+    LCD.SetBackgroundColor(ORANGE);
+    LCD.Clear();
+
+    float fakeX, fakeY;
+    while (!LCD.Touch(&fakeX, &fakeY)){}
+    LCD.SetBackgroundColor(BLUEVIOLET);
+    LCD.Clear();
 
     // Wait for light
 
     // CDS cell values:
-    // 2.1 = nothing
-    // 1.2-1.5 = blue
-    // 0.54-0.75 = red
+    // 2.3-2.5 = nothing
+    // 1.3-1.6 = blue
+    // 0.3-1.1 = red
 
-    float blueMax = 1.5;
-    float redMax = 1.0;
+    float blueMax = 1.9;
+    float redMax = 1.165;
     double timeElapsed = 0.0;
     double timeInitial = TimeNow();
 
     while (CDS() > blueMax && timeElapsed < 33.0){
         timeElapsed = TimeNow() - timeInitial;
+        LCD.WriteLine(timeElapsed);
     }
+
+    zero();
 
     // Find the relative starting point x,y coordinates
     relax = 0;
@@ -459,17 +467,19 @@ int main(){
     else
     {
         SD.FPrintf(overviewFptr, "\n\nMASSIVE PROBLEM. LEVER NOT 0, 1, OR 2\n\n");
+        lever = 0;
+        moveVectorDistance(0, 4, 2.35, std::string("Move to lever 0"), overviewFptr, detailedFptr);
     }
 
     // Pull down the lever
     if(lever == 0){
-        moveVectorDistance(-4, 0, 6.45 + 0.15*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+        moveVectorDistance(-4, 0, 6.45, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     }
     else if(lever ==1){
-        moveVectorDistance(-4, 0, 6.45 + 0.16*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+        moveVectorDistance(-4, 0, 6.45 + 0.16, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     }
     else{
-        moveVectorDistance(-4, 0, 6.45 + 0.17*lever, std::string("Move closer to lever"), overviewFptr, detailedFptr);
+        moveVectorDistance(-4, 0, 6.45 + 0.17*2, std::string("Move closer to lever"), overviewFptr, detailedFptr);
     }
     // Servo mortor flip
 
