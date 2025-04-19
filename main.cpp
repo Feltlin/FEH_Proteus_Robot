@@ -291,8 +291,12 @@ int main(){
 
     float blueMax = 1.5;
     float redMax = 1.0;
+    double timeElapsed = 0.0;
+    double timeInitial = TimeNow();
 
-    while (CDS() > blueMax){}
+    while (CDS() > blueMax && timeElapsed < 33.0){
+        timeElapsed = TimeNow() - timeInitial;
+    }
 
     // Find the relative starting point x,y coordinates
     relax = 0;
