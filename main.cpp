@@ -279,11 +279,14 @@ int main(){
     SD.FPrintf(overviewFptr, "Power on. Battery voltage: %f\nEstimated Percentage: %f\n\n", Battery.Voltage(), (Battery.Voltage()-10.2)/0.7*100.);
 
     RCS.InitializeTouchMenu("1020C8WIE");
+    Sleep(0.25);
     LCD.SetBackgroundColor(ORANGE);
     LCD.Clear();
 
     float fakeX, fakeY;
-    while (!LCD.Touch(&fakeX, &fakeY)){}
+    while (!LCD.Touch(&fakeX, &fakeY)){
+        
+    }
     LCD.SetBackgroundColor(BLUEVIOLET);
     LCD.Clear();
 
